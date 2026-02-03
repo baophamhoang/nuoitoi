@@ -550,7 +550,7 @@ export default function NuoiToiPage() {
                   />
                 </div>
                 <p className="text-sm text-muted-foreground mt-6">
-                  (Thay QR code vào phần phía trên nhé! 😊)
+                  (Quét đỡ QR code phía trên nhé! 😊)
                 </p>
               </div>
             </DialogDescription>
