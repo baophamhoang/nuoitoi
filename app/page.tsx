@@ -1,103 +1,460 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import {
+  Sparkles,
+  TrendingUp,
+  Eye,
+  Smartphone,
+  CheckCircle2,
+  XCircle,
+  Heart,
+  DollarSign,
+} from 'lucide-react';
+import Image from 'next/image';
+
+export default function NuoiToiPage() {
+  const [totalDonations, setTotalDonations] = useState(0);
+  const [donationCount, setDonationCount] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
+
+  const features = [
+    {
+      icon: TrendingUp,
+      title: 'Sao Kê Realtime',
+      description:
+        'Cập nhật từng giây! Còn nhanh hơn cả tốc độ bạn chuyển tiền!',
+      color: 'from-pink-500 to-rose-500',
+    },
+    {
+      icon: Eye,
+      title: 'Minh Bạch 300%',
+      description: 'Hơn cả 100%! Tôi còn báo cáo cả việc mua ly trà sữa!',
+      color: 'from-purple-500 to-indigo-500',
+    },
+    {
+      icon: DollarSign,
+      title: 'Chi Tiêu Hợp Lý',
+      description: 'Không mua xe hơi, nhà cửa. Chỉ ăn cơm với mì tôm thôi!',
+      color: 'from-blue-500 to-cyan-500',
+    },
+    {
+      icon: Smartphone,
+      title: 'App Tracking',
+      description:
+        'Theo dõi 24/7 tôi ăn gì, uống gì, đi đâu. Như "Big Brother" vậy!',
+      color: 'from-green-500 to-emerald-500',
+    },
+  ];
+
+  const commitments = [
+    'Sao kê mỗi ngày: Cập nhật lúc 6h sáng, đều như vắt tranh!',
+    'Không giấu giếm: Từ tô phở 50k đến hộp sữa chua 8k đều được ghi chép tỉ mỉ!',
+    'Có hóa đơn chứng từ: Chụp hình bill, quét mã vạch, lưu biên lai đầy đủ!',
+    'Video unboxing: Mở từng gói mì tôm live trên Facebook cho anh chị xem!',
+    'Hotline 24/7: Gọi hỏi tôi ăn gì bất cứ lúc nào, kể cả 3h sáng!',
+    'Không block: Hỏi khó đến mấy cũng trả lời, không "đã xem" rồi im lặng!',
+  ];
+
+  const expenses = [
+    {
+      percentage: 40,
+      label: 'Ăn uống',
+      description: 'Cơm, mì tôm, trứng, rau. KHÔNG có tôm hùm!',
+      color: 'bg-pink-500',
+    },
+    {
+      percentage: 20,
+      label: 'Điện nước internet',
+      description: 'Để sao kê cho anh chị',
+      color: 'bg-purple-500',
+    },
+    {
+      percentage: 15,
+      label: 'Thuê nhà',
+      description: 'Phòng trọ 15m², không phải penthouse',
+      color: 'bg-blue-500',
+    },
+    {
+      percentage: 10,
+      label: 'Y tế',
+      description: 'Thuốc cảm, vitamin C, khẩu trang',
+      color: 'bg-green-500',
+    },
+    {
+      percentage: 10,
+      label: 'Học tập nâng cao',
+      description: 'Sách, khóa học online để sao kê tốt hơn',
+      color: 'bg-yellow-500',
+    },
+    {
+      percentage: 5,
+      label: 'Giải trí',
+      description: 'Netflix? Không! Chỉ Youtube miễn phí thôi!',
+      color: 'bg-orange-500',
+    },
+  ];
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 relative overflow-hidden">
+      {/* Animated background blobs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-pink-400/30 to-purple-400/30 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/30 to-cyan-400/30 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse delay-500" />
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      <div className="relative z-10">
+        {/* Header */}
+        <header
+          className={`text-center pt-12 pb-8 px-4 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10'}`}
+        >
+          <div className="inline-block mb-4 animate-bounce">
+            <div className="text-6xl">🌱</div>
+          </div>
+          <h1 className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent mb-4 animate-gradient">
+            NUÔI TÔI
+          </h1>
+          <p className="text-xl md:text-2xl text-foreground/80 font-medium">
+            Minh Bạch 100% (Thật Đấy!)
+          </p>
+        </header>
+
+        {/* Hero Section */}
+        <section className="max-w-4xl mx-auto px-4 mb-16">
+          <Card
+            className={`p-8 md:p-12 bg-white/80 backdrop-blur-sm border-2 shadow-2xl transition-all duration-1000 delay-200 hover:scale-105 hover:shadow-pink-200/50 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-6 bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+              HÃY NUÔI TÔI
+            </h2>
+            <p className="text-center text-xl text-muted-foreground mb-8">
+              Tôi hứa sao kê đầy đủ! 💯
+            </p>
+
+            {/* Stats */}
+            <div className="grid md:grid-cols-3 gap-4 mb-8">
+              <div className="bg-gradient-to-br from-pink-500 to-rose-500 rounded-xl p-6 text-white transform hover:scale-110 transition-all duration-300 hover:rotate-1">
+                <div className="text-3xl font-bold">
+                  {totalDonations.toLocaleString()}đ
+                </div>
+                <div className="text-sm opacity-90">Tổng Đã Nhận</div>
+              </div>
+              <div className="bg-gradient-to-br from-purple-500 to-indigo-500 rounded-xl p-6 text-white transform hover:scale-110 transition-all duration-300 hover:-rotate-1">
+                <div className="text-3xl font-bold">{donationCount}</div>
+                <div className="text-sm opacity-90">Lượt Donate</div>
+              </div>
+              <div className="bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl p-6 text-white transform hover:scale-110 transition-all duration-300 hover:rotate-1">
+                <div className="text-3xl font-bold">10,000,000đ</div>
+                <div className="text-sm opacity-90">Mục Tiêu Tháng</div>
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="mb-8">
+              <div className="h-6 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 animate-gradient transition-all duration-1000"
+                  style={{ width: `${(totalDonations / 10000000) * 100}%` }}
+                />
+              </div>
+            </div>
+          </Card>
+        </section>
+
+        {/* Features Grid */}
+        <section className="max-w-6xl mx-auto px-4 mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-foreground">
+            <span className="inline-block animate-bounce">🎯</span> Tại Sao Nên
+            Nuôi Tôi?
+          </h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            {features.map((feature, index) => {
+              const Icon = feature.icon;
+              return (
+                <Card
+                  key={index}
+                  className={`p-6 bg-white/80 backdrop-blur-sm border-2 hover:border-pink-300 transition-all duration-500 hover:scale-105 hover:shadow-2xl group cursor-pointer ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}
+                  style={{ transitionDelay: `${300 + index * 100}ms` }}
+                >
+                  <div
+                    className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 group-hover:rotate-12 group-hover:scale-110 transition-all duration-300`}
+                  >
+                    <Icon className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2 text-foreground group-hover:text-pink-600 transition-colors">
+                    {feature.title}
+                  </h3>
+                  <p className="text-muted-foreground">{feature.description}</p>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Commitments */}
+        <section className="max-w-4xl mx-auto px-4 mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-foreground">
+            <span className="inline-block animate-bounce">🎪</span> Cam Kết Vàng
+            Của Tôi:
+          </h2>
+          <div className="space-y-4">
+            {commitments.map((commitment, index) => (
+              <Card
+                key={index}
+                className={`p-4 bg-white/80 backdrop-blur-sm border-l-4 border-pink-500 hover:border-purple-500 transition-all duration-300 hover:translate-x-2 hover:shadow-lg ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}
+                style={{ transitionDelay: `${500 + index * 100}ms` }}
+              >
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="w-6 h-6 text-pink-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-foreground">{commitment}</p>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* Comparison */}
+        <section className="max-w-5xl mx-auto px-4 mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-foreground">
+            So Sánh Với "Người Khác"
+          </h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Nguoi Khac */}
+            <Card className="p-6 bg-red-50/80 backdrop-blur-sm border-2 border-red-200 hover:scale-105 transition-all duration-300">
+              <div className="flex items-center gap-2 mb-4">
+                <XCircle className="w-8 h-8 text-red-500" />
+                <h3 className="text-2xl font-bold text-red-600">Người Khác</h3>
+              </div>
+              <ul className="space-y-3">
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-1">❌</span>
+                  <span className="text-red-700">
+                    Sao kê sau 3 năm (hoặc không bao giờ)
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-1">❌</span>
+                  <span className="text-red-700">
+                    File Excel blur mờ như ảnh ma
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-1">❌</span>
+                  <span className="text-red-700">
+                    Số liệu "làm tròn" theo kiểu 1 + 1 = 3
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-1">❌</span>
+                  <span className="text-red-700">
+                    Block người hỏi nhanh như chớp
+                  </span>
+                </li>
+              </ul>
+            </Card>
+
+            {/* Nuoi Toi */}
+            <Card className="p-6 bg-green-50/80 backdrop-blur-sm border-2 border-green-200 hover:scale-105 transition-all duration-300">
+              <div className="flex items-center gap-2 mb-4">
+                <CheckCircle2 className="w-8 h-8 text-green-500" />
+                <h3 className="text-2xl font-bold text-green-600">Nuôi Tôi</h3>
+              </div>
+              <ul className="space-y-3">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-1">✅</span>
+                  <span className="text-green-700">
+                    Sao kê trước khi tiêu (để anh chị duyệt)
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-1">✅</span>
+                  <span className="text-green-700">
+                    File Excel 4K Ultra HD, có chữ ký điện tử
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-1">✅</span>
+                  <span className="text-green-700">
+                    Số liệu chính xác đến từng đồng
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-1">✅</span>
+                  <span className="text-green-700">
+                    Trả lời inbox nhanh hơn cả chatbot
+                  </span>
+                </li>
+              </ul>
+            </Card>
+          </div>
+        </section>
+
+        {/* Donation CTA */}
+        <section className="max-w-4xl mx-auto px-4 mb-16">
+          <Card className="p-8 md:p-12 bg-gradient-to-br from-pink-500 via-purple-500 to-blue-500 text-white border-0 shadow-2xl animate-gradient overflow-hidden relative">
+            <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
+            <div className="relative z-10">
+              <h2 className="text-3xl md:text-5xl font-bold text-center mb-6 animate-pulse">
+                DONATE NGAY ĐI!
+              </h2>
+              <p className="text-center text-xl mb-8">
+                Cao nhân làm ơn giúp đỡ !!!
+              </p>
+
+              {/* QR Code placeholder */}
+              <div className="bg-white rounded-2xl p-8 max-w-md mx-auto mb-8 transform hover:scale-105 transition-all duration-300 hover:rotate-2">
+                <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center mb-4">
+                  <div className="text-center relative w-full h-full">
+                    <p className="text-gray-600 font-medium w-">
+                      <Image alt="QR-code" src="/momo.jpg" fill={true}></Image>
+                    </p>
+                  </div>
+                </div>
+                <p className="text-center text-gray-600 font-medium">
+                  Quét mã QR để nuôi tôi nhé!
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button
+                  size="lg"
+                  className="bg-white text-pink-600 hover:bg-gray-100 font-bold text-lg transform hover:scale-110 transition-all duration-300 hover:shadow-2xl"
+                >
+                  <Heart className="w-5 h-5 mr-2" />
+                  TÔI MUỐN NUÔI BẠN!
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-pink-600 font-bold text-lg transform hover:scale-110 transition-all duration-300"
+                >
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  SAO KÊ NGAY
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </section>
+
+        {/* Expense Breakdown */}
+        <section className="max-w-4xl mx-auto px-4 mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-foreground">
+            <span className="inline-block animate-bounce">📈</span> Tôi Sẽ Dùng
+            Tiền Vào Đâu?
+          </h2>
+          <Card className="p-6 md:p-8 bg-white/80 backdrop-blur-sm">
+            <div className="space-y-6">
+              {expenses.map((expense, index) => (
+                <div key={index} className="group">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl font-bold text-foreground">
+                        {expense.percentage}%
+                      </span>
+                      <div>
+                        <div className="font-bold text-foreground">
+                          {expense.label}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {expense.description}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="h-3 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${expense.color} transition-all duration-1000 group-hover:animate-pulse`}
+                      style={{
+                        width: `${expense.percentage}%`,
+                        transitionDelay: `${index * 100}ms`,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </section>
+
+        {/* Message from heart */}
+        <section className="max-w-4xl mx-auto px-4 mb-16">
+          <Card className="p-8 md:p-12 bg-white/80 backdrop-blur-sm border-2 border-pink-200 hover:border-pink-400 transition-all duration-300">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-6 text-foreground">
+              <span className="inline-block animate-bounce">🎤</span> Lời Nhắn
+              Từ Trái Tim
+            </h2>
+            <div className="prose prose-lg max-w-none text-center">
+              <p className="text-lg text-muted-foreground mb-4">
+                Trong thời đại mà{' '}
+                <strong className="text-pink-600">"từ thiện"</strong> đã trở
+                thành từ nhạy cảm,
+              </p>
+              <p className="text-2xl font-bold text-foreground mb-4">
+                Tôi xin khẳng định:{' '}
+                <span className="text-pink-600">HÃY NUÔI TÔI!</span>
+              </p>
+              <p className="text-lg text-muted-foreground mb-4">
+                Tôi nghèo, tôi cần tiền, nhưng tôi KHÔNG MẤT LƯƠNG TÂM! Mỗi đồng
+                tiền các bạn gửi, tôi sẽ chi tiêu rõ ràng, minh bạch như bụng
+                đói của tôi vậy! 😭
+              </p>
+              <p className="text-sm text-muted-foreground italic mt-6">
+                P/S: Tôi hứa sẽ không mua xe hơi bằng tiền donate. Vì... tôi
+                chưa có bằng lái! 🚗❌
+              </p>
+            </div>
+          </Card>
+        </section>
+
+        {/* Disclaimer */}
+        <section className="max-w-4xl mx-auto px-4 pb-16">
+          <Card className="p-6 bg-yellow-50/80 backdrop-blur-sm border-2 border-yellow-300">
+            <div className="flex gap-3">
+              <span className="text-2xl flex-shrink-0">⚠️</span>
+              <div>
+                <p className="font-bold text-yellow-800 mb-2">DISCLAIMER:</p>
+                <p className="text-yellow-700">
+                  Đây là trang web mang tính chất <strong>HÀI HƯỚC</strong>. Mọi
+                  nội dung đều mang tính giải trí, không nhằm mục đích xúc phạm
+                  hay chỉ trích bất kỳ cá nhân/tổ chức nào.
+                </p>
+              </div>
+            </div>
+          </Card>
+        </section>
+
+        {/* Footer */}
+        <footer className="text-center py-8 px-4 text-muted-foreground">
+          <p className="text-sm">
+            Made with{' '}
+            <Heart className="w-4 h-4 inline text-pink-500 animate-pulse" /> and
+            lots of transparency
+          </p>
+        </footer>
+      </div>
+
+      <style jsx global>{`
+        @keyframes gradient {
+          0%,
+          100% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+        }
+        .animate-gradient {
+          background-size: 200% 200%;
+          animation: gradient 3s ease infinite;
+        }
+      `}</style>
     </div>
   );
 }
