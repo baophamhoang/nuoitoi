@@ -16,9 +16,9 @@ import {
 import Image from 'next/image';
 
 export default function NuoiToiPage() {
-  const [totalDonations, setTotalDonations] = useState(0);
-  const [donationCount, setDonationCount] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
+  const totalDonations = 1234567;
+  const donationCount = 128;
 
   useEffect(() => {
     setIsVisible(true);
@@ -102,12 +102,12 @@ export default function NuoiToiPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 relative overflow-hidden">
+    <div className="min-h-screen bg-linear-to-br from-pink-50 via-purple-50 to-blue-50 relative overflow-hidden">
       {/* Animated background blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-pink-400/30 to-purple-400/30 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/30 to-cyan-400/30 rounded-full blur-3xl animate-pulse delay-1000" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse delay-500" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-linear-to-br from-pink-400/30 to-purple-400/30 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-linear-to-br from-blue-400/30 to-cyan-400/30 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-linear-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse delay-500" />
       </div>
 
       <div className="relative z-10">
@@ -118,7 +118,7 @@ export default function NuoiToiPage() {
           <div className="inline-block mb-4 animate-bounce">
             <div className="text-6xl">🌱</div>
           </div>
-          <h1 className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent mb-4 animate-gradient">
+          <h1 className="text-5xl md:text-7xl font-bold bg-linear-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent mb-4 animate-gradient">
             NUÔI TÔI
           </h1>
           <p className="text-xl md:text-2xl text-foreground/80 font-medium">
@@ -131,7 +131,7 @@ export default function NuoiToiPage() {
           <Card
             className={`p-8 md:p-12 bg-white/80 backdrop-blur-sm border-2 shadow-2xl transition-all duration-1000 delay-200 hover:scale-105 hover:shadow-pink-200/50 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-6 bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-6 bg-linear-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
               HÃY NUÔI TÔI
             </h2>
             <p className="text-center text-xl text-muted-foreground mb-8">
@@ -140,17 +140,17 @@ export default function NuoiToiPage() {
 
             {/* Stats */}
             <div className="grid md:grid-cols-3 gap-4 mb-8">
-              <div className="bg-gradient-to-br from-pink-500 to-rose-500 rounded-xl p-6 text-white transform hover:scale-110 transition-all duration-300 hover:rotate-1">
+              <div className="bg-linear-to-br from-pink-500 to-rose-500 rounded-xl p-6 text-white transform hover:scale-110 transition-all duration-300 hover:rotate-1">
                 <div className="text-3xl font-bold">
                   {totalDonations.toLocaleString()}đ
                 </div>
                 <div className="text-sm opacity-90">Tổng Đã Nhận</div>
               </div>
-              <div className="bg-gradient-to-br from-purple-500 to-indigo-500 rounded-xl p-6 text-white transform hover:scale-110 transition-all duration-300 hover:-rotate-1">
+              <div className="bg-linear-to-br from-purple-500 to-indigo-500 rounded-xl p-6 text-white transform hover:scale-110 transition-all duration-300 hover:-rotate-1">
                 <div className="text-3xl font-bold">{donationCount}</div>
                 <div className="text-sm opacity-90">Lượt Donate</div>
               </div>
-              <div className="bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl p-6 text-white transform hover:scale-110 transition-all duration-300 hover:rotate-1">
+              <div className="bg-linear-to-br from-blue-500 to-cyan-500 rounded-xl p-6 text-white transform hover:scale-110 transition-all duration-300 hover:rotate-1">
                 <div className="text-3xl font-bold">10,000,000đ</div>
                 <div className="text-sm opacity-90">Mục Tiêu Tháng</div>
               </div>
@@ -160,7 +160,7 @@ export default function NuoiToiPage() {
             <div className="mb-8">
               <div className="h-6 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 animate-gradient transition-all duration-1000"
+                  className="h-full bg-linear-to-r from-pink-500 via-purple-500 to-blue-500 animate-gradient transition-all duration-1000"
                   style={{ width: `${(totalDonations / 10000000) * 100}%` }}
                 />
               </div>
@@ -184,7 +184,7 @@ export default function NuoiToiPage() {
                   style={{ transitionDelay: `${300 + index * 100}ms` }}
                 >
                   <div
-                    className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 group-hover:rotate-12 group-hover:scale-110 transition-all duration-300`}
+                    className={`w-16 h-16 rounded-2xl bg-linear-to-br ${feature.color} flex items-center justify-center mb-4 group-hover:rotate-12 group-hover:scale-110 transition-all duration-300`}
                   >
                     <Icon className="w-8 h-8 text-white" />
                   </div>
@@ -212,7 +212,7 @@ export default function NuoiToiPage() {
                 style={{ transitionDelay: `${500 + index * 100}ms` }}
               >
                 <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-6 h-6 text-pink-500 flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-6 h-6 text-pink-500 shrink-0 mt-0.5" />
                   <p className="text-foreground">{commitment}</p>
                 </div>
               </Card>
@@ -223,7 +223,7 @@ export default function NuoiToiPage() {
         {/* Comparison */}
         <section className="max-w-5xl mx-auto px-4 mb-16">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-foreground">
-            So Sánh Với "Người Khác"
+            So Sánh Với &quot;Người Khác&quot;
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
             {/* Nguoi Khac */}
@@ -248,7 +248,7 @@ export default function NuoiToiPage() {
                 <li className="flex items-start gap-2">
                   <span className="text-red-500 mt-1">❌</span>
                   <span className="text-red-700">
-                    Số liệu "làm tròn" theo kiểu 1 + 1 = 3
+                    Số liệu &quot;làm tròn&quot; theo kiểu 1 + 1 = 3
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
@@ -298,7 +298,7 @@ export default function NuoiToiPage() {
 
         {/* Donation CTA */}
         <section className="max-w-4xl mx-auto px-4 mb-16">
-          <Card className="p-8 md:p-12 bg-gradient-to-br from-pink-500 via-purple-500 to-blue-500 text-white border-0 shadow-2xl animate-gradient overflow-hidden relative">
+          <Card className="p-8 md:p-12 bg-linear-to-br from-pink-500 via-purple-500 to-blue-500 text-white border-0 shadow-2xl animate-gradient overflow-hidden relative">
             <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
             <div className="relative z-10">
               <h2 className="text-3xl md:text-5xl font-bold text-center mb-6 animate-pulse">
@@ -310,9 +310,9 @@ export default function NuoiToiPage() {
 
               {/* QR Code placeholder */}
               <div className="bg-white rounded-2xl p-8 max-w-md mx-auto mb-8 transform hover:scale-105 transition-all duration-300 hover:rotate-2">
-                <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center mb-4">
+                <div className="aspect-square bg-linear-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center mb-4">
                   <div className="text-center relative w-full h-full">
-                    <p className="text-gray-600 font-medium w-">
+                    <p className="text-gray-600 font-medium w-full">
                       <Image alt="QR-code" src="/momo.jpg" fill={true}></Image>
                     </p>
                   </div>
@@ -393,7 +393,7 @@ export default function NuoiToiPage() {
             <div className="prose prose-lg max-w-none text-center">
               <p className="text-lg text-muted-foreground mb-4">
                 Trong thời đại mà{' '}
-                <strong className="text-pink-600">"từ thiện"</strong> đã trở
+                <strong className="text-pink-600">&quot;từ thiện&quot;</strong> đã trở
                 thành từ nhạy cảm,
               </p>
               <p className="text-2xl font-bold text-foreground mb-4">
@@ -417,7 +417,7 @@ export default function NuoiToiPage() {
         <section className="max-w-4xl mx-auto px-4 pb-16">
           <Card className="p-6 bg-yellow-50/80 backdrop-blur-sm border-2 border-yellow-300">
             <div className="flex gap-3">
-              <span className="text-2xl flex-shrink-0">⚠️</span>
+              <span className="text-2xl shrink-0">⚠️</span>
               <div>
                 <p className="font-bold text-yellow-800 mb-2">DISCLAIMER:</p>
                 <p className="text-yellow-700">
