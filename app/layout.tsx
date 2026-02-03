@@ -1,11 +1,11 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Noto_Sans, Noto_Sans_Mono } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 
-const _geist = Geist({ subsets: ['latin'] });
-const _geistMono = Geist_Mono({ subsets: ['latin'] });
+const _geist = Noto_Sans({ subsets: ['latin', 'vietnamese'] });
+const _geistMono = Noto_Sans_Mono({ subsets: ['latin', 'vietnamese'] });
 
 export const metadata: Metadata = {
   title: '🎉 Hãy nuôi tôi! 🎉',
@@ -36,7 +36,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`font-sans antialiased`}>
+      <body className={`${_geist.className} ${_geistMono.className} antialiased`}>
         {children}
         <Analytics />
       </body>
