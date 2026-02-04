@@ -29,15 +29,18 @@ import {
 import Image from 'next/image';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { toast } from 'sonner';
+import {
+  triggerConfetti,
+  triggerConfettiCannon,
+  triggerMegaCelebration,
+  triggerEmojiConfetti,
+} from '@/lib/confetti';
 
 export default function NuoiToiPage() {
   const [totalDonations, setTotalDonations] = useState(0);
   const [donationCount, setDonationCount] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
-  const [confetti, setConfetti] = useState<
-    Array<{ id: number; x: number; y: number; color: string; delay: number }>
-  >([]);
   const [darkMode, setDarkMode] = useState(false);
   const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
   const [lastMilestone, setLastMilestone] = useState(0);
@@ -129,26 +132,6 @@ export default function NuoiToiPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const triggerConfetti = (intensity: number = 50) => {
-    const colors = [
-      '#ec4899',
-      '#8b5cf6',
-      '#3b82f6',
-      '#06b6d4',
-      '#10b981',
-      '#f59e0b',
-    ];
-    const newConfetti = Array.from({ length: intensity }, (_, i) => ({
-      id: Date.now() + i,
-      x: Math.random() * 100,
-      y: -10,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      delay: Math.random() * 200,
-    }));
-    setConfetti(newConfetti);
-    setTimeout(() => setConfetti([]), 3000);
-  };
-
   // Check for milestone achievements
   const checkMilestone = (newTotal: number) => {
     const targetAmount = 10000000;
@@ -164,7 +147,7 @@ export default function NuoiToiPage() {
       if (percentage >= milestone.threshold && lastMilestone < milestone.threshold) {
         setLastMilestone(milestone.threshold);
         setCelebrationMessage(milestone.message);
-        triggerConfetti(100); // Extra confetti for milestones
+        triggerMegaCelebration(); // MEGA confetti for milestones!
         setTimeout(() => setCelebrationMessage(null), 4000);
         break;
       }
@@ -172,7 +155,7 @@ export default function NuoiToiPage() {
   };
 
   const handleDonateClick = () => {
-    triggerConfetti();
+    triggerConfettiCannon();
     setShowDialog(true);
   };
 
@@ -408,7 +391,7 @@ export default function NuoiToiPage() {
                 onClick={() => {
                   const newTotal = totalDonations + 50000;
                   setTotalDonations(newTotal);
-                  triggerConfetti();
+                  triggerEmojiConfetti();
                   checkMilestone(newTotal);
                   toast.success('+50,000đ!', {
                     description: 'Cảm ơn bạn đã donate! 💕',
@@ -904,25 +887,6 @@ export default function NuoiToiPage() {
           <div className="bg-linear-to-r from-pink-500 via-purple-500 to-blue-500 text-white px-8 py-4 rounded-2xl shadow-2xl text-2xl md:text-3xl font-bold text-center">
             {celebrationMessage}
           </div>
-        </div>
-      )}
-
-      {/* Confetti Effect */}
-      {confetti.length > 0 && (
-        <div className="fixed inset-0 pointer-events-none z-50">
-          {confetti.map((piece) => (
-            <div
-              key={piece.id}
-              className="absolute w-3 h-3 animate-fall"
-              style={{
-                left: `${piece.x}%`,
-                top: `${piece.y}%`,
-                backgroundColor: piece.color,
-                animationDelay: `${piece.delay}ms`,
-                transform: 'rotate(45deg)',
-              }}
-            />
-          ))}
         </div>
       )}
 
