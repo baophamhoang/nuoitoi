@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -19,8 +19,12 @@ import {
   XCircle,
   Heart,
   DollarSign,
+  Moon,
+  Sun,
+  Share2,
 } from 'lucide-react';
 import Image from 'next/image';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 export default function NuoiToiPage() {
   const [totalDonations, setTotalDonations] = useState(0);
@@ -30,12 +34,63 @@ export default function NuoiToiPage() {
   const [confetti, setConfetti] = useState<
     Array<{ id: number; x: number; y: number; color: string; delay: number }>
   >([]);
+  const [darkMode, setDarkMode] = useState(false);
+  const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
+  const [lastMilestone, setLastMilestone] = useState(0);
+  const [isHoveringDonations, setIsHoveringDonations] = useState(false);
+  const donationsListRef = useRef<HTMLDivElement>(null);
+  const scrollDirectionRef = useRef<'down' | 'up'>('down');
+  const scrollAnimationRef = useRef<number | null>(null);
+
+  // Auto-scroll donations list
+  const animateScroll = useCallback(() => {
+    if (!donationsListRef.current || isHoveringDonations) {
+      scrollAnimationRef.current = requestAnimationFrame(animateScroll);
+      return;
+    }
+
+    const container = donationsListRef.current;
+    const maxScroll = container.scrollHeight - container.clientHeight;
+    const scrollSpeed = 0.5; // pixels per frame
+
+    if (scrollDirectionRef.current === 'down') {
+      container.scrollTop += scrollSpeed;
+      if (container.scrollTop >= maxScroll) {
+        scrollDirectionRef.current = 'up';
+      }
+    } else {
+      container.scrollTop -= scrollSpeed;
+      if (container.scrollTop <= 0) {
+        scrollDirectionRef.current = 'down';
+      }
+    }
+
+    scrollAnimationRef.current = requestAnimationFrame(animateScroll);
+  }, [isHoveringDonations]);
+
+  useEffect(() => {
+    scrollAnimationRef.current = requestAnimationFrame(animateScroll);
+    return () => {
+      if (scrollAnimationRef.current) {
+        cancelAnimationFrame(scrollAnimationRef.current);
+      }
+    };
+  }, [animateScroll]);
+
+  // Dark mode effect
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
 
   useEffect(() => {
     setIsVisible(true);
   }, []);
 
-  const triggerConfetti = () => {
+  const triggerConfetti = (intensity: number = 50) => {
     const colors = [
       '#ec4899',
       '#8b5cf6',
@@ -44,7 +99,7 @@ export default function NuoiToiPage() {
       '#10b981',
       '#f59e0b',
     ];
-    const newConfetti = Array.from({ length: 50 }, (_, i) => ({
+    const newConfetti = Array.from({ length: intensity }, (_, i) => ({
       id: Date.now() + i,
       x: Math.random() * 100,
       y: -10,
@@ -55,9 +110,60 @@ export default function NuoiToiPage() {
     setTimeout(() => setConfetti([]), 3000);
   };
 
+  // Check for milestone achievements
+  const checkMilestone = (newTotal: number) => {
+    const targetAmount = 10000000;
+    const percentage = (newTotal / targetAmount) * 100;
+    const milestones = [
+      { threshold: 25, message: '🎉 Đạt 25%! Cảm ơn các bạn!' },
+      { threshold: 50, message: '🔥 Nửa đường rồi! 50% hoàn thành!' },
+      { threshold: 75, message: '🚀 75%! Sắp về đích!' },
+      { threshold: 100, message: '🏆 HOÀN THÀNH! Cảm ơn tất cả!' },
+    ];
+
+    for (const milestone of milestones) {
+      if (percentage >= milestone.threshold && lastMilestone < milestone.threshold) {
+        setLastMilestone(milestone.threshold);
+        setCelebrationMessage(milestone.message);
+        triggerConfetti(100); // Extra confetti for milestones
+        setTimeout(() => setCelebrationMessage(null), 4000);
+        break;
+      }
+    }
+  };
+
   const handleDonateClick = () => {
     triggerConfetti();
     setShowDialog(true);
+  };
+
+  const scrollToQRCode = () => {
+    const qrSection = document.getElementById('donate-section');
+    if (qrSection) {
+      qrSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: 'Nuôi Tôi - Minh Bạch 100%!',
+      text: 'Hãy nuôi tôi! Cam kết sao kê đầy đủ, minh bạch từng đồng!',
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(
+          `${shareData.title}\n${shareData.text}\n${shareData.url}`
+        );
+        alert('Link đã được copy! Chia sẻ cho bạn bè nhé!');
+      }
+    } catch (err) {
+      console.log('Share failed:', err);
+    }
   };
 
   const features = [
@@ -104,41 +210,70 @@ export default function NuoiToiPage() {
       label: 'Ăn uống',
       description: 'Cơm, mì tôm, trứng, rau. KHÔNG có tôm hùm!',
       color: 'bg-pink-500',
+      chartColor: '#ec4899',
     },
     {
       percentage: 20,
       label: 'Điện nước internet',
       description: 'Để sao kê cho anh chị',
       color: 'bg-purple-500',
+      chartColor: '#a855f7',
     },
     {
       percentage: 15,
       label: 'Thuê nhà',
       description: 'Phòng trọ 15m², không phải penthouse',
       color: 'bg-blue-500',
+      chartColor: '#3b82f6',
     },
     {
       percentage: 10,
       label: 'Y tế',
       description: 'Thuốc cảm, vitamin C, khẩu trang',
       color: 'bg-green-500',
+      chartColor: '#22c55e',
     },
     {
       percentage: 10,
       label: 'Học tập nâng cao',
       description: 'Sách, khóa học online để sao kê tốt hơn',
       color: 'bg-yellow-500',
+      chartColor: '#eab308',
     },
     {
       percentage: 5,
       label: 'Giải trí',
       description: 'Netflix? Không! Chỉ Youtube miễn phí thôi!',
       color: 'bg-orange-500',
+      chartColor: '#f97316',
     },
   ];
 
+  // Data for pie chart
+  const pieChartData = expenses.map((expense) => ({
+    name: expense.label,
+    value: expense.percentage,
+    color: expense.chartColor,
+  }));
+
+  // Mock recent donations data
+  const recentDonations = [
+    { id: 1, name: 'Ẩn danh', amount: 50000, message: 'Cố lên nhé!', time: '2 phút trước' },
+    { id: 2, name: 'Anh T***', amount: 100000, message: 'Ủng hộ minh bạch!', time: '5 phút trước' },
+    { id: 3, name: 'Chị H***', amount: 20000, message: '', time: '10 phút trước' },
+    { id: 4, name: 'Ẩn danh', amount: 200000, message: 'Sao kê đi nhé 😂', time: '15 phút trước' },
+    { id: 5, name: 'Bạn N***', amount: 50000, message: 'Mua mì tôm đi!', time: '20 phút trước' },
+  ];
+
   return (
-    <div className="min-h-screen bg-linear-to-br from-pink-50 via-purple-50 to-blue-50 relative overflow-hidden">
+    <div
+      className="min-h-screen relative overflow-hidden transition-colors duration-500"
+      style={{
+        background: darkMode
+          ? 'linear-gradient(to bottom right, #111827, #581c87, #111827)'
+          : 'linear-gradient(to bottom right, #fdf2f8, #f5f3ff, #eff6ff)'
+      }}
+    >
       {/* Animated background blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-linear-to-br from-pink-400/30 to-purple-400/30 rounded-full blur-3xl animate-pulse" />
@@ -149,8 +284,31 @@ export default function NuoiToiPage() {
       <div className="relative z-10">
         {/* Header */}
         <header
-          className={`text-center pt-12 pb-8 px-4 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10'}`}
+          className={`text-center pt-12 pb-8 px-4 transition-all duration-1000 relative ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10'}`}
         >
+          {/* Header buttons */}
+          <div className="absolute top-4 right-4 flex gap-2">
+            {/* Share button */}
+            <button
+              onClick={handleShare}
+              className="p-3 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-pink-200 dark:border-pink-500 hover:scale-110 transition-all duration-300 shadow-lg hover:shadow-pink-200 dark:hover:shadow-pink-500/30"
+              aria-label="Share this page"
+            >
+              <Share2 className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+            </button>
+            {/* Dark mode toggle */}
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-3 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-pink-200 dark:border-pink-500 hover:scale-110 transition-all duration-300 shadow-lg hover:shadow-pink-200 dark:hover:shadow-pink-500/30"
+              aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {darkMode ? (
+                <Sun className="w-5 h-5 text-yellow-500" />
+              ) : (
+                <Moon className="w-5 h-5 text-purple-600" />
+              )}
+            </button>
+          </div>
           <div className="inline-block mb-4 animate-bounce cursor-pointer hover:scale-125 transition-transform duration-300">
             <div className="text-6xl">🌱</div>
           </div>
@@ -170,17 +328,28 @@ export default function NuoiToiPage() {
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-6 bg-linear-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
               HÃY NUÔI TÔI
             </h2>
-            <p className="text-center text-xl text-muted-foreground mb-8">
+            <p className="text-center text-xl text-muted-foreground mb-4">
               Tôi hứa sao kê đầy đủ! 💯
             </p>
+            <div className="text-center mb-8">
+              <Button
+                onClick={scrollToQRCode}
+                className="bg-linear-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-bold transform hover:scale-105 transition-all duration-300"
+              >
+                <Heart className="w-4 h-4 mr-2" />
+                Donate Ngay
+              </Button>
+            </div>
 
             {/* Stats */}
             <div className="grid md:grid-cols-3 gap-4 mb-8">
               <div
                 className="bg-linear-to-br from-pink-500 to-rose-500 rounded-xl p-6 text-white transform hover:scale-110 transition-all duration-300 hover:rotate-1 cursor-pointer active:scale-95 hover:shadow-2xl hover:shadow-pink-300"
                 onClick={() => {
-                  setTotalDonations((prev) => prev + 50000);
+                  const newTotal = totalDonations + 50000;
+                  setTotalDonations(newTotal);
                   triggerConfetti();
+                  checkMilestone(newTotal);
                 }}
               >
                 <div className="text-3xl font-bold">
@@ -210,12 +379,89 @@ export default function NuoiToiPage() {
 
             {/* Progress bar */}
             <div className="mb-8">
-              <div className="h-6 bg-muted rounded-full overflow-hidden">
+              <div className="flex justify-between text-sm text-muted-foreground mb-2">
+                <span>{((totalDonations / 10000000) * 100).toFixed(1)}% hoàn thành</span>
+                <span>{totalDonations.toLocaleString()}đ / 10,000,000đ</span>
+              </div>
+              <div className="h-6 bg-muted rounded-full overflow-hidden relative">
                 <div
                   className="h-full bg-linear-to-r from-pink-500 via-purple-500 to-blue-500 animate-gradient transition-all duration-1000"
-                  style={{ width: `${(totalDonations / 10000000) * 100}%` }}
+                  style={{ width: `${Math.min((totalDonations / 10000000) * 100, 100)}%` }}
                 />
+                {/* Milestone markers */}
+                <div className="absolute inset-0 flex items-center">
+                  {[25, 50, 75].map((milestone) => (
+                    <div
+                      key={milestone}
+                      className="absolute h-full w-0.5 bg-white/30"
+                      style={{ left: `${milestone}%` }}
+                    />
+                  ))}
+                </div>
               </div>
+              {/* Milestone labels */}
+              <div className="flex justify-between text-xs text-muted-foreground mt-1 px-1">
+                <span>0%</span>
+                <span>25%</span>
+                <span>50%</span>
+                <span>75%</span>
+                <span>100%</span>
+              </div>
+            </div>
+          </Card>
+        </section>
+
+        {/* Recent Donations Feed */}
+        <section className="max-w-4xl mx-auto px-4 mb-16">
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 text-foreground">
+            <span className="inline-block animate-pulse">💝</span> Những Người Đã Nuôi Tôi
+          </h2>
+          <Card
+            className="p-4 md:p-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm overflow-hidden"
+            onMouseEnter={() => setIsHoveringDonations(true)}
+            onMouseLeave={() => setIsHoveringDonations(false)}
+          >
+            <div
+              ref={donationsListRef}
+              className="space-y-3 max-h-64 overflow-y-auto overflow-x-hidden pr-2 scroll-smooth"
+              style={{ scrollbarWidth: 'thin' }}
+            >
+              {recentDonations.map((donation, index) => (
+                <div
+                  key={donation.id}
+                  className={`flex items-center justify-between p-3 rounded-lg border border-pink-100 dark:border-pink-800 transition-all duration-300 hover:shadow-md ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+                  style={{
+                    transitionDelay: `${index * 100}ms`,
+                    background: darkMode
+                      ? 'linear-gradient(to right, rgba(157, 23, 77, 0.2), rgba(126, 34, 206, 0.2))'
+                      : 'linear-gradient(to right, #fdf2f8, #faf5ff)'
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shrink-0"
+                      style={{ background: 'linear-gradient(to bottom right, #f472b6, #a855f7)' }}
+                    >
+                      {donation.name.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-medium text-foreground truncate">{donation.name}</div>
+                      {donation.message && (
+                        <div className="text-sm text-muted-foreground truncate">&quot;{donation.message}&quot;</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0 ml-2">
+                    <div className="font-bold text-pink-600 dark:text-pink-400">
+                      +{donation.amount.toLocaleString()}đ
+                    </div>
+                    <div className="text-xs text-muted-foreground">{donation.time}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="text-center mt-4 text-sm text-muted-foreground">
+              {recentDonations.length} người đã donate tuần này
             </div>
           </Card>
         </section>
@@ -349,7 +595,7 @@ export default function NuoiToiPage() {
         </section>
 
         {/* Donation CTA */}
-        <section className="max-w-4xl mx-auto px-4 mb-16">
+        <section id="donate-section" className="max-w-4xl mx-auto px-4 mb-16">
           <Card className="p-8 md:p-12 bg-linear-to-br from-pink-500 via-purple-500 to-blue-500 text-white border-0 shadow-2xl animate-gradient overflow-hidden relative">
             <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
             <div className="relative z-10">
@@ -362,16 +608,12 @@ export default function NuoiToiPage() {
 
               {/* QR Code placeholder */}
               <div className="bg-white rounded-2xl p-8 max-w-md mx-auto mb-8 transform hover:scale-105 transition-all duration-300 hover:rotate-2">
-                <div className="aspect-square bg-linear-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center mb-4">
-                  <div className="text-center relative w-full h-full">
-                    <p className="text-gray-600 font-medium w-full">
-                      <Image alt="QR-code" src="/momo.jpg" fill={true}></Image>
-                    </p>
-                  </div>
+                <div className="aspect-square bg-linear-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center mb-4 relative">
+                  <Image alt="QR-code" src="/momo.jpg" fill={true} className="rounded-xl object-cover" />
                 </div>
-                <p className="text-center text-gray-600 font-medium">
+                <div className="text-center text-gray-600 font-medium">
                   Quét mã QR để nuôi tôi nhé!
-                </p>
+                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -403,7 +645,54 @@ export default function NuoiToiPage() {
             <span className="inline-block animate-bounce">📈</span> Tôi Sẽ Dùng
             Tiền Vào Đâu?
           </h2>
-          <Card className="p-6 md:p-8 bg-white/80 backdrop-blur-sm">
+          <Card className="p-6 md:p-8 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+            {/* Pie Chart */}
+            <div className="mb-8">
+              <div className="h-64 md:h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieChartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={2}
+                      dataKey="value"
+                      animationBegin={0}
+                      animationDuration={1000}
+                    >
+                      {pieChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: number, name: string) => [`${value}%`, name]}
+                      contentStyle={{
+                        borderRadius: '8px',
+                        border: 'none',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Legend */}
+              <div className="flex flex-wrap justify-center gap-4 mt-4">
+                {expenses.map((expense, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div
+                      className={`w-3 h-3 rounded-full ${expense.color}`}
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      {expense.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Detailed breakdown */}
             <div className="space-y-6">
               {expenses.map((expense, index) => (
                 <div key={index} className="group">
@@ -494,6 +783,15 @@ export default function NuoiToiPage() {
         </footer>
       </div>
 
+      {/* Milestone Celebration Message */}
+      {celebrationMessage && (
+        <div className="fixed top-1/4 left-1/2 -translate-x-1/2 z-50 animate-bounce">
+          <div className="bg-linear-to-r from-pink-500 via-purple-500 to-blue-500 text-white px-8 py-4 rounded-2xl shadow-2xl text-2xl md:text-3xl font-bold text-center">
+            {celebrationMessage}
+          </div>
+        </div>
+      )}
+
       {/* Confetti Effect */}
       {confetti.length > 0 && (
         <div className="fixed inset-0 pointer-events-none z-50">
@@ -524,17 +822,17 @@ export default function NuoiToiPage() {
               <br />
               Chờ xíu nhé!
             </DialogTitle>
-            <DialogDescription className="text-center text-lg pt-4">
-              <div className="space-y-4">
-                <p className="text-2xl font-bold text-foreground animate-pulse">
+            <DialogDescription asChild>
+              <div className="text-center text-lg pt-4 space-y-4">
+                <span className="block text-2xl font-bold text-foreground animate-pulse">
                   Bạn chờ xíu nha.
-                </p>
-                <p
-                  className="text-2xl font-bold text-foreground animate-pulse"
+                </span>
+                <span
+                  className="block text-2xl font-bold text-foreground animate-pulse"
                   style={{ animationDelay: '150ms' }}
                 >
                   Tôi code sắp xong rồi
-                </p>
+                </span>
                 <div className="flex justify-center gap-1 mt-6">
                   <div
                     className="w-3 h-3 bg-pink-500 rounded-full animate-bounce"
@@ -549,9 +847,9 @@ export default function NuoiToiPage() {
                     style={{ animationDelay: '300ms' }}
                   />
                 </div>
-                <p className="text-sm text-muted-foreground mt-6">
+                <span className="block text-sm text-muted-foreground mt-6">
                   (Quét đỡ QR code phía trên nhé! 😊)
-                </p>
+                </span>
               </div>
             </DialogDescription>
           </DialogHeader>
