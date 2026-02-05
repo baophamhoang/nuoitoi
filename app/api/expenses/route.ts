@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import type { Expense } from '@/lib/supabase/types';
 
-// Mock expense data
-// In a real app, this would come from a database or Google Sheets
+// Mock expense data for when Supabase is not configured
 const mockExpenses = {
   categories: [
     {
@@ -69,18 +70,72 @@ const mockExpenses = {
   month: 'Tháng 2/2026',
 };
 
-// GET /api/expenses - Get expense breakdown
-export async function GET() {
-  // Calculate totals
-  const totalSpent = mockExpenses.categories.reduce((sum, cat) => sum + cat.spent, 0);
-  const totalBudget = mockExpenses.categories.reduce((sum, cat) => sum + cat.budget, 0);
+function formatExpenseResponse(categories: typeof mockExpenses.categories, month: string, isMock = false) {
+  const totalSpent = categories.reduce((sum, cat) => sum + cat.spent, 0);
+  const totalBudget = categories.reduce((sum, cat) => sum + cat.budget, 0);
 
-  return NextResponse.json({
-    ...mockExpenses,
+  return {
+    categories,
+    lastUpdated: new Date().toISOString(),
+    month,
     totalSpent,
     totalBudget,
     formattedTotalSpent: totalSpent.toLocaleString('vi-VN') + 'đ',
     formattedTotalBudget: totalBudget.toLocaleString('vi-VN') + 'đ',
     spendingPercentage: Number(((totalSpent / totalBudget) * 100).toFixed(1)),
-  });
+    ...(isMock && { isMock: true }),
+  };
+}
+
+// Helper to check if Supabase is configured (supports both old and new key names)
+function isSupabaseConfigured(): boolean {
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && supabaseKey);
+}
+
+// GET /api/expenses - Get expense breakdown
+export async function GET() {
+  // Check if Supabase is configured
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json(formatExpenseResponse(mockExpenses.categories, mockExpenses.month, true));
+  }
+
+  try {
+    const supabase = await createClient();
+
+    // Get current month in format "Tháng M/YYYY"
+    const now = new Date();
+    const currentMonth = `Tháng ${now.getMonth() + 1}/${now.getFullYear()}`;
+
+    const { data: expenses, error } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('month', currentMonth);
+
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
+
+    // If no expenses found for current month, return mock data
+    if (!expenses || expenses.length === 0) {
+      return NextResponse.json(formatExpenseResponse(mockExpenses.categories, currentMonth, true));
+    }
+
+    const categories = (expenses as Expense[]).map((e) => ({
+      id: e.id,
+      percentage: e.percentage,
+      label: e.label,
+      description: e.description || '',
+      color: e.color || 'bg-gray-500',
+      chartColor: e.chart_color || '#6b7280',
+      spent: e.spent,
+      budget: e.budget,
+    }));
+
+    return NextResponse.json(formatExpenseResponse(categories, currentMonth));
+  } catch (error) {
+    console.error('Failed to fetch expenses:', error);
+    return NextResponse.json(formatExpenseResponse(mockExpenses.categories, mockExpenses.month, true));
+  }
 }
