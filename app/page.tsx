@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -22,11 +23,19 @@ import {
   Moon,
   Sun,
   Share2,
+  ArrowUp,
+  Gift,
 } from 'lucide-react';
 import Image from 'next/image';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import {
+  triggerConfetti,
+  triggerConfettiCannon,
+  triggerMegaCelebration,
+  triggerEmojiConfetti,
+} from '@/lib/confetti';
 
 interface Donation {
   id: string;
@@ -56,16 +65,17 @@ export default function NuoiToiPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
-  const [confetti, setConfetti] = useState<
-    Array<{ id: number; x: number; y: number; color: string; delay: number }>
-  >([]);
   const [darkMode, setDarkMode] = useState(false);
   const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
   const [lastMilestone, setLastMilestone] = useState(0);
   const [isHoveringDonations, setIsHoveringDonations] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [typedText, setTypedText] = useState('');
   const donationsListRef = useRef<HTMLDivElement>(null);
   const scrollDirectionRef = useRef<'down' | 'up'>('down');
   const scrollAnimationRef = useRef<number | null>(null);
+  const fullText = 'Minh Bạch 100% (Thật Đấy!)';
 
   // Auto-scroll donations list
   const animateScroll = useCallback(() => {
@@ -205,7 +215,7 @@ export default function NuoiToiPage() {
           );
 
           // Trigger confetti
-          triggerConfetti(30);
+          triggerConfetti();
         }
       )
       .subscribe();
@@ -227,27 +237,37 @@ export default function NuoiToiPage() {
 
   useEffect(() => {
     setIsVisible(true);
+    // Simulate loading
+    const loadTimer = setTimeout(() => setIsLoading(false), 1500);
+    return () => clearTimeout(loadTimer);
   }, []);
 
-  const triggerConfetti = (intensity: number = 50) => {
-    const colors = [
-      '#ec4899',
-      '#8b5cf6',
-      '#3b82f6',
-      '#06b6d4',
-      '#10b981',
-      '#f59e0b',
-    ];
-    const newConfetti = Array.from({ length: intensity }, (_, i) => ({
-      id: Date.now() + i,
-      x: Math.random() * 100,
-      y: -10,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      delay: Math.random() * 200,
-    }));
-    setConfetti(newConfetti);
-    setTimeout(() => setConfetti([]), 3000);
-  };
+  // Typing effect for hero text
+  useEffect(() => {
+    if (isLoading) return;
+    let index = 0;
+    const typingInterval = setInterval(() => {
+      if (index <= fullText.length) {
+        setTypedText(fullText.slice(0, index));
+        index++;
+      } else {
+        clearInterval(typingInterval);
+      }
+    }, 50);
+    return () => clearInterval(typingInterval);
+  }, [isLoading]);
+
+  // Scroll progress indicator
+  useEffect(() => {
+    const handleScroll = () => {
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = (window.scrollY / totalHeight) * 100;
+      setScrollProgress(progress);
+      setShowScrollTop(window.scrollY > 500);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Check for milestone achievements
   const checkMilestone = useCallback((newTotal: number) => {
@@ -263,7 +283,7 @@ export default function NuoiToiPage() {
       if (percentage >= milestone.threshold && lastMilestone < milestone.threshold) {
         setLastMilestone(milestone.threshold);
         setCelebrationMessage(milestone.message);
-        triggerConfetti(100); // Extra confetti for milestones
+        triggerMegaCelebration(); // MEGA confetti for milestones!
         setTimeout(() => setCelebrationMessage(null), 4000);
         break;
       }
@@ -271,7 +291,7 @@ export default function NuoiToiPage() {
   }, [lastMilestone, monthlyGoal]);
 
   const handleDonateClick = () => {
-    triggerConfetti();
+    triggerConfettiCannon();
     setShowDialog(true);
   };
 
@@ -292,16 +312,28 @@ export default function NuoiToiPage() {
     try {
       if (navigator.share) {
         await navigator.share(shareData);
+        toast.success('Cảm ơn bạn đã chia sẻ!', {
+          description: 'Lan tỏa yêu thương 💕',
+        });
       } else {
         // Fallback: copy to clipboard
         await navigator.clipboard.writeText(
           `${shareData.title}\n${shareData.text}\n${shareData.url}`
         );
-        alert('Link đã được copy! Chia sẻ cho bạn bè nhé!');
+        toast.success('Link đã được copy!', {
+          description: 'Chia sẻ cho bạn bè nhé! 🎉',
+        });
       }
     } catch (err) {
       console.log('Share failed:', err);
+      toast.error('Không thể chia sẻ', {
+        description: 'Vui lòng thử lại sau!',
+      });
     }
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const features = [
@@ -425,6 +457,14 @@ export default function NuoiToiPage() {
           : 'linear-gradient(to bottom right, #fdf2f8, #f5f3ff, #eff6ff)'
       }}
     >
+      {/* Scroll Progress Bar */}
+      <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-muted/30">
+        <div
+          className="h-full bg-linear-to-r from-pink-500 via-purple-500 to-blue-500 transition-all duration-150"
+          style={{ width: `${scrollProgress}%` }}
+        />
+      </div>
+
       {/* Animated background blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-linear-to-br from-pink-400/30 to-purple-400/30 rounded-full blur-3xl animate-pulse" />
@@ -466,8 +506,9 @@ export default function NuoiToiPage() {
           <h1 className="text-5xl md:text-7xl font-bold bg-linear-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent mb-4 animate-gradient cursor-pointer hover:scale-110 transition-transform duration-300">
             NUÔI TÔI
           </h1>
-          <p className="text-xl md:text-2xl text-foreground/80 font-medium hover:text-pink-600 transition-colors duration-300 cursor-pointer">
-            Minh Bạch 100% (Thật Đấy!)
+          <p className="text-xl md:text-2xl text-foreground/80 font-medium hover:text-pink-600 transition-colors duration-300 cursor-pointer h-8">
+            {typedText}
+            <span className="animate-pulse">|</span>
           </p>
         </header>
 
@@ -499,8 +540,11 @@ export default function NuoiToiPage() {
                 onClick={() => {
                   const newTotal = totalDonations + 50000;
                   setTotalDonations(newTotal);
-                  triggerConfetti();
+                  triggerEmojiConfetti();
                   checkMilestone(newTotal);
+                  toast.success('+50,000đ!', {
+                    description: 'Cảm ơn bạn đã donate! 💕',
+                  });
                 }}
               >
                 <div className="text-3xl font-bold">
@@ -516,6 +560,9 @@ export default function NuoiToiPage() {
                 onClick={() => {
                   setDonationCount((prev) => prev + 1);
                   triggerConfetti();
+                  toast.success('+1 lượt donate!', {
+                    description: 'Thêm một người yêu thương! ❤️',
+                  });
                 }}
               >
                 <div className="text-3xl font-bold">{isLoading ? '...' : donationCount}</div>
@@ -577,39 +624,61 @@ export default function NuoiToiPage() {
               className="space-y-3 max-h-64 overflow-y-auto overflow-x-hidden pr-2 scroll-smooth"
               style={{ scrollbarWidth: 'thin' }}
             >
-              {recentDonations.map((donation, index) => (
-                <div
-                  key={donation.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border border-pink-100 dark:border-pink-800 transition-all duration-300 hover:shadow-md ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-                  style={{
-                    transitionDelay: `${index * 100}ms`,
-                    background: darkMode
-                      ? 'linear-gradient(to right, rgba(157, 23, 77, 0.2), rgba(126, 34, 206, 0.2))'
-                      : 'linear-gradient(to right, #fdf2f8, #faf5ff)'
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shrink-0"
-                      style={{ background: 'linear-gradient(to bottom right, #f472b6, #a855f7)' }}
-                    >
-                      {donation.name.charAt(0)}
+              {isLoading ? (
+                // Skeleton loading state
+                Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 rounded-lg border border-pink-100 dark:border-pink-800"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="w-10 h-10 rounded-full" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <div className="font-medium text-foreground truncate">{donation.name}</div>
-                      {donation.message && (
-                        <div className="text-sm text-muted-foreground truncate">&quot;{donation.message}&quot;</div>
-                      )}
+                    <div className="text-right space-y-2">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-3 w-16" />
                     </div>
                   </div>
-                  <div className="text-right shrink-0 ml-2">
-                    <div className="font-bold text-pink-600 dark:text-pink-400">
-                      +{donation.amount.toLocaleString()}đ
+                ))
+              ) : (
+                recentDonations.map((donation, index) => (
+                  <div
+                    key={donation.id}
+                    className={`flex items-center justify-between p-3 rounded-lg border border-pink-100 dark:border-pink-800 transition-all duration-300 hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+                    style={{
+                      transitionDelay: `${index * 100}ms`,
+                      background: darkMode
+                        ? 'linear-gradient(to right, rgba(157, 23, 77, 0.2), rgba(126, 34, 206, 0.2))'
+                        : 'linear-gradient(to right, #fdf2f8, #faf5ff)'
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shrink-0 transition-transform duration-300 hover:scale-110 hover:rotate-12"
+                        style={{ background: 'linear-gradient(to bottom right, #f472b6, #a855f7)' }}
+                      >
+                        {donation.name.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-medium text-foreground truncate">{donation.name}</div>
+                        {donation.message && (
+                          <div className="text-sm text-muted-foreground truncate">&quot;{donation.message}&quot;</div>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">{donation.time}</div>
+                    <div className="text-right shrink-0 ml-2">
+                      <div className="font-bold text-pink-600 dark:text-pink-400">
+                        +{donation.amount.toLocaleString()}đ
+                      </div>
+                      <div className="text-xs text-muted-foreground">{donation.time}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
             <div className="text-center mt-4 text-sm text-muted-foreground">
               {recentDonations.length} người đã donate tuần này
@@ -657,12 +726,17 @@ export default function NuoiToiPage() {
             {commitments.map((commitment, index) => (
               <Card
                 key={index}
-                className={`p-4 bg-white/80 backdrop-blur-sm border-l-4 border-pink-500 hover:border-purple-500 transition-all duration-300 hover:translate-x-2 hover:shadow-lg ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}
+                className={`group p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-l-4 border-pink-500 hover:border-purple-500 transition-all duration-300 hover:translate-x-2 hover:shadow-xl hover:shadow-pink-200/50 dark:hover:shadow-purple-500/20 hover:bg-white dark:hover:bg-gray-800 cursor-pointer ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}
                 style={{ transitionDelay: `${500 + index * 100}ms` }}
+                onClick={() => {
+                  toast.success('Cam kết vàng!', {
+                    description: commitment.slice(0, 50) + '...',
+                  });
+                }}
               >
                 <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-6 h-6 text-pink-500 shrink-0 mt-0.5" />
-                  <p className="text-foreground">{commitment}</p>
+                  <CheckCircle2 className="w-6 h-6 text-pink-500 shrink-0 mt-0.5 transition-all duration-300 group-hover:text-purple-500 group-hover:scale-125 group-hover:rotate-12" />
+                  <p className="text-foreground transition-colors duration-300 group-hover:text-pink-600 dark:group-hover:text-pink-400">{commitment}</p>
                 </div>
               </Card>
             ))}
@@ -934,31 +1008,34 @@ export default function NuoiToiPage() {
         </footer>
       </div>
 
+      {/* Floating Action Buttons */}
+      <div className="fixed bottom-6 right-6 z-40 flex flex-col gap-3">
+        {/* Scroll to Top Button */}
+        <button
+          onClick={scrollToTop}
+          className={`p-3 rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-2 border-purple-200 dark:border-purple-500 shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-purple-300 dark:hover:shadow-purple-500/30 ${showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}
+          aria-label="Scroll to top"
+        >
+          <ArrowUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+        </button>
+
+        {/* Floating Donate Button */}
+        <button
+          onClick={scrollToQRCode}
+          className="group p-4 rounded-full bg-linear-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-300/50 dark:shadow-pink-500/30 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-pink-400/50 animate-bounce"
+          style={{ animationDuration: '2s' }}
+          aria-label="Donate now"
+        >
+          <Gift className="w-6 h-6 transition-transform duration-300 group-hover:rotate-12" />
+        </button>
+      </div>
+
       {/* Milestone Celebration Message */}
       {celebrationMessage && (
         <div className="fixed top-1/4 left-1/2 -translate-x-1/2 z-50 animate-bounce">
           <div className="bg-linear-to-r from-pink-500 via-purple-500 to-blue-500 text-white px-8 py-4 rounded-2xl shadow-2xl text-2xl md:text-3xl font-bold text-center">
             {celebrationMessage}
           </div>
-        </div>
-      )}
-
-      {/* Confetti Effect */}
-      {confetti.length > 0 && (
-        <div className="fixed inset-0 pointer-events-none z-50">
-          {confetti.map((piece) => (
-            <div
-              key={piece.id}
-              className="absolute w-3 h-3 animate-fall"
-              style={{
-                left: `${piece.x}%`,
-                top: `${piece.y}%`,
-                backgroundColor: piece.color,
-                animationDelay: `${piece.delay}ms`,
-                transform: 'rotate(45deg)',
-              }}
-            />
-          ))}
         </div>
       )}
 

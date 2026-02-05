@@ -2,7 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { Noto_Sans, Noto_Sans_Mono } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
-import { Toaster } from 'sonner';
+import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
 const _geist = Noto_Sans({ subsets: ['latin', 'vietnamese'] });
@@ -39,7 +39,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${_geist.className} ${_geistMono.className} antialiased`}>
         {children}
-        <Toaster position="top-right" richColors />
+        <Toaster position="top-center" richColors />
         <Analytics />
       </body>
     </html>
