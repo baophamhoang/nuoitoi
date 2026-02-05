@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import {
   triggerConfetti,
@@ -36,9 +37,32 @@ import {
   triggerEmojiConfetti,
 } from '@/lib/confetti';
 
+interface Donation {
+  id: string;
+  name: string;
+  amount: number;
+  message: string;
+  time: string;
+}
+
+interface ExpenseCategory {
+  id: string;
+  percentage: number;
+  label: string;
+  description: string;
+  color: string;
+  chartColor: string;
+  spent: number;
+  budget: number;
+}
+
 export default function NuoiToiPage() {
   const [totalDonations, setTotalDonations] = useState(0);
   const [donationCount, setDonationCount] = useState(0);
+  const [monthlyGoal, setMonthlyGoal] = useState(10000000);
+  const [recentDonations, setRecentDonations] = useState<Donation[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseCategory[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
@@ -47,7 +71,6 @@ export default function NuoiToiPage() {
   const [isHoveringDonations, setIsHoveringDonations] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [typedText, setTypedText] = useState('');
   const donationsListRef = useRef<HTMLDivElement>(null);
   const scrollDirectionRef = useRef<'down' | 'up'>('down');
@@ -88,6 +111,120 @@ export default function NuoiToiPage() {
       }
     };
   }, [animateScroll]);
+
+  // Fetch initial data
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch donations, stats, and expenses in parallel
+        const [donationsRes, statsRes, expensesRes] = await Promise.all([
+          fetch('/api/donations'),
+          fetch('/api/donations/stats'),
+          fetch('/api/expenses'),
+        ]);
+
+        const [donationsData, statsData, expensesData] = await Promise.all([
+          donationsRes.json(),
+          statsRes.json(),
+          expensesRes.json(),
+        ]);
+
+        // Set donations
+        if (donationsData.donations) {
+          setRecentDonations(donationsData.donations);
+        }
+
+        // Set stats
+        if (statsData) {
+          setTotalDonations(statsData.totalAmount || 0);
+          setDonationCount(statsData.donationCount || 0);
+          setMonthlyGoal(statsData.monthlyGoal || 10000000);
+          // Set initial milestone based on current progress
+          const percentage = ((statsData.totalAmount || 0) / (statsData.monthlyGoal || 10000000)) * 100;
+          if (percentage >= 100) setLastMilestone(100);
+          else if (percentage >= 75) setLastMilestone(75);
+          else if (percentage >= 50) setLastMilestone(50);
+          else if (percentage >= 25) setLastMilestone(25);
+        }
+
+        // Set expenses
+        if (expensesData.categories) {
+          setExpenses(expensesData.categories);
+        }
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Supabase realtime subscription for donations
+  useEffect(() => {
+    // Only set up realtime if Supabase is configured
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !supabaseKey) {
+      return;
+    }
+
+    const supabase = createClient();
+
+    const channel = supabase
+      .channel('donations-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'donations' },
+        (payload) => {
+          const newDonation = payload.new as {
+            id: string;
+            name: string;
+            amount: number;
+            message: string | null;
+            created_at: string;
+          };
+
+          // Update donations list
+          const formattedDonation: Donation = {
+            id: newDonation.id,
+            name: newDonation.name || 'Ẩn danh',
+            amount: newDonation.amount,
+            message: newDonation.message || '',
+            time: 'Vừa xong',
+          };
+
+          setRecentDonations((prev) => [formattedDonation, ...prev].slice(0, 20));
+
+          // Update totals
+          setTotalDonations((prev) => {
+            const newTotal = prev + newDonation.amount;
+            checkMilestone(newTotal);
+            return newTotal;
+          });
+          setDonationCount((prev) => prev + 1);
+
+          // Show toast notification
+          toast.success(
+            `${newDonation.name || 'Ẩn danh'} vừa donate ${newDonation.amount.toLocaleString()}đ!`,
+            {
+              description: newDonation.message || 'Cảm ơn bạn!',
+              duration: 5000,
+            }
+          );
+
+          // Trigger confetti
+          triggerConfetti();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Dark mode effect
   useEffect(() => {
@@ -133,9 +270,8 @@ export default function NuoiToiPage() {
   }, []);
 
   // Check for milestone achievements
-  const checkMilestone = (newTotal: number) => {
-    const targetAmount = 10000000;
-    const percentage = (newTotal / targetAmount) * 100;
+  const checkMilestone = useCallback((newTotal: number) => {
+    const percentage = (newTotal / monthlyGoal) * 100;
     const milestones = [
       { threshold: 25, message: '🎉 Đạt 25%! Cảm ơn các bạn!' },
       { threshold: 50, message: '🔥 Nửa đường rồi! 50% hoàn thành!' },
@@ -152,7 +288,7 @@ export default function NuoiToiPage() {
         break;
       }
     }
-  };
+  }, [lastMilestone, monthlyGoal]);
 
   const handleDonateClick = () => {
     triggerConfettiCannon();
@@ -238,66 +374,79 @@ export default function NuoiToiPage() {
     'Không block: Hỏi khó đến mấy cũng trả lời, không "đã xem" rồi im lặng!',
   ];
 
-  const expenses = [
+  // Default expenses for fallback
+  const defaultExpenses: ExpenseCategory[] = [
     {
+      id: 'food',
       percentage: 40,
       label: 'Ăn uống',
       description: 'Cơm, mì tôm, trứng, rau. KHÔNG có tôm hùm!',
       color: 'bg-pink-500',
       chartColor: '#ec4899',
+      spent: 0,
+      budget: 4000000,
     },
     {
+      id: 'utilities',
       percentage: 20,
       label: 'Điện nước internet',
       description: 'Để sao kê cho anh chị',
       color: 'bg-purple-500',
       chartColor: '#a855f7',
+      spent: 0,
+      budget: 2000000,
     },
     {
+      id: 'rent',
       percentage: 15,
       label: 'Thuê nhà',
       description: 'Phòng trọ 15m², không phải penthouse',
       color: 'bg-blue-500',
       chartColor: '#3b82f6',
+      spent: 0,
+      budget: 1500000,
     },
     {
+      id: 'health',
       percentage: 10,
       label: 'Y tế',
       description: 'Thuốc cảm, vitamin C, khẩu trang',
       color: 'bg-green-500',
       chartColor: '#22c55e',
+      spent: 0,
+      budget: 1000000,
     },
     {
+      id: 'learning',
       percentage: 10,
       label: 'Học tập nâng cao',
       description: 'Sách, khóa học online để sao kê tốt hơn',
       color: 'bg-yellow-500',
       chartColor: '#eab308',
+      spent: 0,
+      budget: 1000000,
     },
     {
+      id: 'entertainment',
       percentage: 5,
       label: 'Giải trí',
       description: 'Netflix? Không! Chỉ Youtube miễn phí thôi!',
       color: 'bg-orange-500',
       chartColor: '#f97316',
+      spent: 0,
+      budget: 500000,
     },
   ];
 
+  // Use fetched expenses or fallback to defaults
+  const displayExpenses = expenses.length > 0 ? expenses : defaultExpenses;
+
   // Data for pie chart
-  const pieChartData = expenses.map((expense) => ({
+  const pieChartData = displayExpenses.map((expense) => ({
     name: expense.label,
     value: expense.percentage,
     color: expense.chartColor,
   }));
-
-  // Mock recent donations data
-  const recentDonations = [
-    { id: 1, name: 'Ẩn danh', amount: 50000, message: 'Cố lên nhé!', time: '2 phút trước' },
-    { id: 2, name: 'Anh T***', amount: 100000, message: 'Ủng hộ minh bạch!', time: '5 phút trước' },
-    { id: 3, name: 'Chị H***', amount: 20000, message: '', time: '10 phút trước' },
-    { id: 4, name: 'Ẩn danh', amount: 200000, message: 'Sao kê đi nhé 😂', time: '15 phút trước' },
-    { id: 5, name: 'Bạn N***', amount: 50000, message: 'Mua mì tôm đi!', time: '20 phút trước' },
-  ];
 
   return (
     <div
@@ -399,7 +548,7 @@ export default function NuoiToiPage() {
                 }}
               >
                 <div className="text-3xl font-bold">
-                  {totalDonations.toLocaleString()}đ
+                  {isLoading ? '...' : `${totalDonations.toLocaleString()}đ`}
                 </div>
                 <div className="text-sm opacity-90">Tổng Đã Nhận</div>
                 <div className="text-xs mt-2 opacity-75">
@@ -416,12 +565,12 @@ export default function NuoiToiPage() {
                   });
                 }}
               >
-                <div className="text-3xl font-bold">{donationCount}</div>
+                <div className="text-3xl font-bold">{isLoading ? '...' : donationCount}</div>
                 <div className="text-sm opacity-90">Lượt Donate</div>
                 <div className="text-xs mt-2 opacity-75">(Click để +1 ❤️)</div>
               </div>
               <div className="bg-linear-to-br from-blue-500 to-cyan-500 rounded-xl p-6 text-white transform hover:scale-110 transition-all duration-300 hover:rotate-1 cursor-pointer hover:shadow-2xl hover:shadow-blue-300 active:scale-95">
-                <div className="text-3xl font-bold">10,000,000đ</div>
+                <div className="text-3xl font-bold">{monthlyGoal.toLocaleString()}đ</div>
                 <div className="text-sm opacity-90">Mục Tiêu Tháng</div>
               </div>
             </div>
@@ -429,13 +578,13 @@ export default function NuoiToiPage() {
             {/* Progress bar */}
             <div className="mb-8">
               <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                <span>{((totalDonations / 10000000) * 100).toFixed(1)}% hoàn thành</span>
-                <span>{totalDonations.toLocaleString()}đ / 10,000,000đ</span>
+                <span>{((totalDonations / monthlyGoal) * 100).toFixed(1)}% hoàn thành</span>
+                <span>{totalDonations.toLocaleString()}đ / {monthlyGoal.toLocaleString()}đ</span>
               </div>
               <div className="h-6 bg-muted rounded-full overflow-hidden relative">
                 <div
                   className="h-full bg-linear-to-r from-pink-500 via-purple-500 to-blue-500 animate-gradient transition-all duration-1000"
-                  style={{ width: `${Math.min((totalDonations / 10000000) * 100, 100)}%` }}
+                  style={{ width: `${Math.min((totalDonations / monthlyGoal) * 100, 100)}%` }}
                 />
                 {/* Milestone markers */}
                 <div className="absolute inset-0 flex items-center">
@@ -755,7 +904,7 @@ export default function NuoiToiPage() {
               </div>
               {/* Legend */}
               <div className="flex flex-wrap justify-center gap-4 mt-4">
-                {expenses.map((expense, index) => (
+                {displayExpenses.map((expense, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <div
                       className={`w-3 h-3 rounded-full ${expense.color}`}
@@ -770,7 +919,7 @@ export default function NuoiToiPage() {
 
             {/* Detailed breakdown */}
             <div className="space-y-6">
-              {expenses.map((expense, index) => (
+              {displayExpenses.map((expense, index) => (
                 <div key={index} className="group">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
