@@ -1,41 +1,31 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Sparkles,
-  TrendingUp,
-  Eye,
-  Smartphone,
-  CheckCircle2,
-  XCircle,
   Heart,
-  DollarSign,
   Moon,
   Sun,
   Share2,
   ArrowUp,
   Gift,
-  Loader2,
 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import {
   triggerConfetti,
-  triggerConfettiCannon,
   triggerMegaCelebration,
   triggerEmojiConfetti,
 } from '@/lib/confetti';
+
+import { HeroSection } from '@/components/hero-section';
+import { DonateFormSection } from '@/components/donate-form-section';
+import { PaymentDialog } from '@/components/payment-dialog';
+import { DonationsFeed } from '@/components/donations-feed';
+import { ExpenseBreakdown } from '@/components/expense-breakdown';
+import { FeaturesGrid } from '@/components/features-grid';
+import { CommitmentsSection } from '@/components/commitments-section';
+import { ComparisonSection } from '@/components/comparison-section';
 
 interface Donation {
   id: string;
@@ -93,7 +83,7 @@ export default function NuoiToiPage() {
 
     const container = donationsListRef.current;
     const maxScroll = container.scrollHeight - container.clientHeight;
-    const scrollSpeed = 0.5; // pixels per frame
+    const scrollSpeed = 0.5;
 
     if (scrollDirectionRef.current === 'down') {
       container.scrollTop += scrollSpeed;
@@ -124,7 +114,6 @@ export default function NuoiToiPage() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // Fetch donations, stats, and expenses in parallel
         const [donationsRes, statsRes, expensesRes] = await Promise.all([
           fetch('/api/donations'),
           fetch('/api/donations/stats'),
@@ -137,17 +126,14 @@ export default function NuoiToiPage() {
           expensesRes.json(),
         ]);
 
-        // Set donations
         if (donationsData.donations) {
           setRecentDonations(donationsData.donations);
         }
 
-        // Set stats
         if (statsData) {
           setTotalDonations(statsData.totalAmount || 0);
           setDonationCount(statsData.donationCount || 0);
           setMonthlyGoal(statsData.monthlyGoal || 10000000);
-          // Set initial milestone based on current progress
           const percentage = ((statsData.totalAmount || 0) / (statsData.monthlyGoal || 10000000)) * 100;
           if (percentage >= 100) setLastMilestone(100);
           else if (percentage >= 75) setLastMilestone(75);
@@ -155,7 +141,6 @@ export default function NuoiToiPage() {
           else if (percentage >= 25) setLastMilestone(25);
         }
 
-        // Set expenses
         if (expensesData.categories) {
           setExpenses(expensesData.categories);
         }
@@ -171,7 +156,6 @@ export default function NuoiToiPage() {
 
   // Supabase realtime subscription for donations
   useEffect(() => {
-    // Only set up realtime if Supabase is configured
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !supabaseKey) {
       return;
@@ -193,7 +177,6 @@ export default function NuoiToiPage() {
             created_at: string;
           };
 
-          // Update donations list
           const formattedDonation: Donation = {
             id: newDonation.id,
             name: newDonation.name || 'Ẩn danh',
@@ -204,7 +187,6 @@ export default function NuoiToiPage() {
 
           setRecentDonations((prev) => [formattedDonation, ...prev].slice(0, 20));
 
-          // Update totals
           setTotalDonations((prev) => {
             const newTotal = prev + newDonation.amount;
             checkMilestone(newTotal);
@@ -212,7 +194,6 @@ export default function NuoiToiPage() {
           });
           setDonationCount((prev) => prev + 1);
 
-          // Show toast notification
           toast.success(
             `${newDonation.name || 'Ẩn danh'} vừa donate ${newDonation.amount.toLocaleString()}đ!`,
             {
@@ -221,7 +202,6 @@ export default function NuoiToiPage() {
             }
           );
 
-          // Trigger confetti
           triggerConfetti();
         }
       )
@@ -244,7 +224,6 @@ export default function NuoiToiPage() {
 
   useEffect(() => {
     setIsVisible(true);
-    // Simulate loading
     const loadTimer = setTimeout(() => setIsLoading(false), 1500);
     return () => clearTimeout(loadTimer);
   }, []);
@@ -299,6 +278,23 @@ export default function NuoiToiPage() {
           setDonorMessage('');
           setPaymentQR(null);
           setPaymentOrderCode(null);
+
+          // Re-fetch donations to ensure the list is fresh
+          try {
+            const donationsRes = await fetch('/api/donations');
+            const donationsData = await donationsRes.json();
+            if (donationsData.donations) {
+              setRecentDonations(donationsData.donations);
+            }
+            const statsRes = await fetch('/api/donations/stats');
+            const statsData = await statsRes.json();
+            if (statsData) {
+              setTotalDonations(statsData.totalAmount || 0);
+              setDonationCount(statsData.donationCount || 0);
+            }
+          } catch {
+            // Silently ignore re-fetch errors — realtime will catch up
+          }
         } else if (data.status === 'CANCELLED' || data.status === 'EXPIRED') {
           setPaymentStatus('error');
           toast.error('Thanh toán đã hủy hoặc hết hạn');
@@ -325,7 +321,7 @@ export default function NuoiToiPage() {
       if (percentage >= milestone.threshold && lastMilestone < milestone.threshold) {
         setLastMilestone(milestone.threshold);
         setCelebrationMessage(milestone.message);
-        triggerMegaCelebration(); // MEGA confetti for milestones!
+        triggerMegaCelebration();
         setTimeout(() => setCelebrationMessage(null), 4000);
         break;
       }
@@ -334,10 +330,8 @@ export default function NuoiToiPage() {
 
   const handleDonateClick = async () => {
     const amount = Number(donateAmount.replace(/\D/g, ''));
-    if (!amount || amount < 1000) {
-      toast.error('Vui lòng nhập số tiền hợp lệ', {
-        description: 'Tối thiểu 1.000đ',
-      });
+    if (!amount || amount < 2000) {
+      toast.error('Số tiền tối thiểu là 2.000đ');
       return;
     }
 
@@ -408,7 +402,6 @@ export default function NuoiToiPage() {
           description: 'Lan tỏa yêu thương 💕',
         });
       } else {
-        // Fallback: copy to clipboard
         await navigator.clipboard.writeText(
           `${shareData.title}\n${shareData.text}\n${shareData.url}`
         );
@@ -428,43 +421,32 @@ export default function NuoiToiPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const features = [
-    {
-      icon: TrendingUp,
-      title: 'Sao Kê Realtime',
-      description:
-        'Cập nhật từng giây! Còn nhanh hơn cả tốc độ bạn chuyển tiền!',
-      color: 'from-pink-500 to-rose-500',
-    },
-    {
-      icon: Eye,
-      title: 'Minh Bạch 300%',
-      description: 'Hơn cả 100%! Tôi còn báo cáo cả việc mua ly trà sữa!',
-      color: 'from-purple-500 to-indigo-500',
-    },
-    {
-      icon: DollarSign,
-      title: 'Chi Tiêu Hợp Lý',
-      description: 'Không mua xe hơi, nhà cửa. Chỉ ăn cơm với mì tôm thôi!',
-      color: 'from-blue-500 to-cyan-500',
-    },
-    {
-      icon: Smartphone,
-      title: 'App Tracking',
-      description:
-        'Theo dõi 24/7 tôi ăn gì, uống gì, đi đâu. Như "Big Brother" vậy!',
-      color: 'from-green-500 to-emerald-500',
-    },
-  ];
+  const handleDemoClick = (type: 'donate' | 'count') => {
+    if (type === 'donate') {
+      const newTotal = totalDonations + 50000;
+      setTotalDonations(newTotal);
+      triggerEmojiConfetti();
+      checkMilestone(newTotal);
+      toast.success('+50,000đ!', {
+        description: 'Cảm ơn bạn đã donate! 💕',
+      });
+    } else {
+      setDonationCount((prev) => prev + 1);
+      triggerConfetti();
+      toast.success('+1 lượt donate!', {
+        description: 'Thêm một người yêu thương! ❤️',
+      });
+    }
+  };
 
-  const commitments = [
-    'Sao kê mỗi ngày: Cập nhật lúc 6h sáng, đều như vắt tranh!',
-    'Không giấu giếm: Từ tô phở 50k đến hộp sữa chua 8k đều được ghi chép tỉ mỉ!',
-    'Có hóa đơn chứng từ: Chụp hình bill, quét mã vạch, lưu biên lai đầy đủ!',
-    'Video unboxing: Mở từng gói mì tôm live trên Facebook cho anh chị xem!',
-    'Hotline 24/7: Gọi hỏi tôi ăn gì bất cứ lúc nào, kể cả 3h sáng!',
-    'Không block: Hỏi khó đến mấy cũng trả lời, không "đã xem" rồi im lặng!',
-  ];
+  const handleDialogOpenChange = (open: boolean) => {
+    setShowDialog(open);
+    if (!open) {
+      setPaymentStatus('idle');
+      setPaymentQR(null);
+      setPaymentOrderCode(null);
+    }
+  };
 
   // Default expenses for fallback
   const defaultExpenses: ExpenseCategory[] = [
@@ -530,16 +512,6 @@ export default function NuoiToiPage() {
     },
   ];
 
-  // Use fetched expenses or fallback to defaults
-  const displayExpenses = expenses.length > 0 ? expenses : defaultExpenses;
-
-  // Data for pie chart
-  const pieChartData = displayExpenses.map((expense) => ({
-    name: expense.label,
-    value: expense.percentage,
-    color: expense.chartColor,
-  }));
-
   return (
     <div
       className="min-h-screen relative overflow-hidden transition-colors duration-500"
@@ -569,9 +541,7 @@ export default function NuoiToiPage() {
         <header
           className={`text-center pt-12 pb-8 px-4 transition-all duration-1000 relative ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10'}`}
         >
-          {/* Header buttons */}
           <div className="absolute top-4 right-4 flex gap-2">
-            {/* Share button */}
             <button
               onClick={handleShare}
               className="p-3 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-pink-200 dark:border-pink-500 hover:scale-110 transition-all duration-300 shadow-lg hover:shadow-pink-200 dark:hover:shadow-pink-500/30"
@@ -579,7 +549,6 @@ export default function NuoiToiPage() {
             >
               <Share2 className="w-5 h-5 text-pink-600 dark:text-pink-400" />
             </button>
-            {/* Dark mode toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-3 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-pink-200 dark:border-pink-500 hover:scale-110 transition-all duration-300 shadow-lg hover:shadow-pink-200 dark:hover:shadow-pink-500/30"
@@ -604,494 +573,47 @@ export default function NuoiToiPage() {
           </p>
         </header>
 
-        {/* Hero Section */}
-        <section className="max-w-4xl mx-auto px-4 mb-16">
-          <Card
-            className={`p-8 md:p-12 bg-white/80 backdrop-blur-sm border-2 shadow-2xl transition-all duration-1000 delay-200 hover:scale-105 hover:shadow-pink-200/50 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
-          >
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-6 bg-linear-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-              HÃY NUÔI TÔI
-            </h2>
-            <p className="text-center text-xl text-muted-foreground mb-4">
-              Tôi hứa sao kê đầy đủ! 💯
-            </p>
-            <div className="text-center mb-8">
-              <Button
-                onClick={scrollToQRCode}
-                className="bg-linear-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-bold transform hover:scale-105 transition-all duration-300"
-              >
-                <Heart className="w-4 h-4 mr-2" />
-                Donate Ngay
-              </Button>
-            </div>
+        <HeroSection
+          totalDonations={totalDonations}
+          donationCount={donationCount}
+          monthlyGoal={monthlyGoal}
+          isLoading={isLoading}
+          isVisible={isVisible}
+          onScrollToQR={scrollToQRCode}
+          onDemoClick={handleDemoClick}
+        />
 
-            {/* Stats */}
-            <div className="grid md:grid-cols-3 gap-4 mb-8">
-              <div
-                className="bg-linear-to-br from-pink-500 to-rose-500 rounded-xl p-6 text-white transform hover:scale-110 transition-all duration-300 hover:rotate-1 cursor-pointer active:scale-95 hover:shadow-2xl hover:shadow-pink-300"
-                onClick={() => {
-                  const newTotal = totalDonations + 50000;
-                  setTotalDonations(newTotal);
-                  triggerEmojiConfetti();
-                  checkMilestone(newTotal);
-                  toast.success('+50,000đ!', {
-                    description: 'Cảm ơn bạn đã donate! 💕',
-                  });
-                }}
-              >
-                <div className="text-3xl font-bold">
-                  {isLoading ? '...' : `${totalDonations.toLocaleString()}đ`}
-                </div>
-                <div className="text-sm opacity-90">Tổng Đã Nhận</div>
-                <div className="text-xs mt-2 opacity-75">
-                  (Click để donate 50k 😉)
-                </div>
-              </div>
-              <div
-                className="bg-linear-to-br from-purple-500 to-indigo-500 rounded-xl p-6 text-white transform hover:scale-110 transition-all duration-300 hover:-rotate-1 cursor-pointer active:scale-95 hover:shadow-2xl hover:shadow-purple-300"
-                onClick={() => {
-                  setDonationCount((prev) => prev + 1);
-                  triggerConfetti();
-                  toast.success('+1 lượt donate!', {
-                    description: 'Thêm một người yêu thương! ❤️',
-                  });
-                }}
-              >
-                <div className="text-3xl font-bold">{isLoading ? '...' : donationCount}</div>
-                <div className="text-sm opacity-90">Lượt Donate</div>
-                <div className="text-xs mt-2 opacity-75">(Click để +1 ❤️)</div>
-              </div>
-              <div className="bg-linear-to-br from-blue-500 to-cyan-500 rounded-xl p-6 text-white transform hover:scale-110 transition-all duration-300 hover:rotate-1 cursor-pointer hover:shadow-2xl hover:shadow-blue-300 active:scale-95">
-                <div className="text-3xl font-bold">{monthlyGoal.toLocaleString()}đ</div>
-                <div className="text-sm opacity-90">Mục Tiêu Tháng</div>
-              </div>
-            </div>
+        <DonationsFeed
+          ref={donationsListRef}
+          donations={recentDonations}
+          isLoading={isLoading}
+          isVisible={isVisible}
+          darkMode={darkMode}
+          onMouseEnter={() => setIsHoveringDonations(true)}
+          onMouseLeave={() => setIsHoveringDonations(false)}
+        />
 
-            {/* Progress bar */}
-            <div className="mb-8">
-              <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                <span>{((totalDonations / monthlyGoal) * 100).toFixed(1)}% hoàn thành</span>
-                <span>{totalDonations.toLocaleString()}đ / {monthlyGoal.toLocaleString()}đ</span>
-              </div>
-              <div className="h-6 bg-muted rounded-full overflow-hidden relative">
-                <div
-                  className="h-full bg-linear-to-r from-pink-500 via-purple-500 to-blue-500 animate-gradient transition-all duration-1000"
-                  style={{ width: `${Math.min((totalDonations / monthlyGoal) * 100, 100)}%` }}
-                />
-                {/* Milestone markers */}
-                <div className="absolute inset-0 flex items-center">
-                  {[25, 50, 75].map((milestone) => (
-                    <div
-                      key={milestone}
-                      className="absolute h-full w-0.5 bg-white/30"
-                      style={{ left: `${milestone}%` }}
-                    />
-                  ))}
-                </div>
-              </div>
-              {/* Milestone labels */}
-              <div className="flex justify-between text-xs text-muted-foreground mt-1 px-1">
-                <span>0%</span>
-                <span>25%</span>
-                <span>50%</span>
-                <span>75%</span>
-                <span>100%</span>
-              </div>
-            </div>
-          </Card>
-        </section>
+        <FeaturesGrid isVisible={isVisible} />
 
-        {/* Recent Donations Feed */}
-        <section className="max-w-4xl mx-auto px-4 mb-16">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 text-foreground">
-            <span className="inline-block animate-pulse">💝</span> Những Người Đã Nuôi Tôi
-          </h2>
-          <Card
-            className="p-4 md:p-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm overflow-hidden"
-            onMouseEnter={() => setIsHoveringDonations(true)}
-            onMouseLeave={() => setIsHoveringDonations(false)}
-          >
-            <div
-              ref={donationsListRef}
-              className="space-y-3 max-h-64 overflow-y-auto overflow-x-hidden pr-2 scroll-smooth"
-              style={{ scrollbarWidth: 'thin' }}
-            >
-              {isLoading ? (
-                // Skeleton loading state
-                Array.from({ length: 4 }).map((_, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 rounded-lg border border-pink-100 dark:border-pink-800"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="w-10 h-10 rounded-full" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-3 w-32" />
-                      </div>
-                    </div>
-                    <div className="text-right space-y-2">
-                      <Skeleton className="h-4 w-20" />
-                      <Skeleton className="h-3 w-16" />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                recentDonations.map((donation, index) => (
-                  <div
-                    key={donation.id}
-                    className={`flex items-center justify-between p-3 rounded-lg border border-pink-100 dark:border-pink-800 transition-all duration-300 hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-                    style={{
-                      transitionDelay: `${index * 100}ms`,
-                      background: darkMode
-                        ? 'linear-gradient(to right, rgba(157, 23, 77, 0.2), rgba(126, 34, 206, 0.2))'
-                        : 'linear-gradient(to right, #fdf2f8, #faf5ff)'
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shrink-0 transition-transform duration-300 hover:scale-110 hover:rotate-12"
-                        style={{ background: 'linear-gradient(to bottom right, #f472b6, #a855f7)' }}
-                      >
-                        {donation.name.charAt(0)}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-medium text-foreground truncate">{donation.name}</div>
-                        {donation.message && (
-                          <div className="text-sm text-muted-foreground truncate">&quot;{donation.message}&quot;</div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0 ml-2">
-                      <div className="font-bold text-pink-600 dark:text-pink-400">
-                        +{donation.amount.toLocaleString()}đ
-                      </div>
-                      <div className="text-xs text-muted-foreground">{donation.time}</div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-            <div className="text-center mt-4 text-sm text-muted-foreground">
-              {recentDonations.length} người đã donate tuần này
-            </div>
-          </Card>
-        </section>
+        <CommitmentsSection isVisible={isVisible} />
 
-        {/* Features Grid */}
-        <section className="max-w-6xl mx-auto px-4 mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-foreground">
-            <span className="inline-block animate-bounce">🎯</span> Tại Sao Nên
-            Nuôi Tôi?
-          </h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <Card
-                  key={index}
-                  className={`p-6 bg-white/80 backdrop-blur-sm border-2 hover:border-pink-300 transition-all duration-500 hover:scale-105 hover:shadow-2xl group cursor-pointer ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}
-                  style={{ transitionDelay: `${300 + index * 100}ms` }}
-                >
-                  <div
-                    className={`w-16 h-16 rounded-2xl bg-linear-to-br ${feature.color} flex items-center justify-center mb-4 group-hover:rotate-12 group-hover:scale-110 transition-all duration-300`}
-                  >
-                    <Icon className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-2 text-foreground group-hover:text-pink-600 transition-colors">
-                    {feature.title}
-                  </h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </Card>
-              );
-            })}
-          </div>
-        </section>
+        <ComparisonSection />
 
-        {/* Commitments */}
-        <section className="max-w-4xl mx-auto px-4 mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-foreground">
-            <span className="inline-block animate-bounce">🎪</span> Cam Kết Vàng
-            Của Tôi:
-          </h2>
-          <div className="space-y-4">
-            {commitments.map((commitment, index) => (
-              <Card
-                key={index}
-                className={`group p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-l-4 border-pink-500 hover:border-purple-500 transition-all duration-300 hover:translate-x-2 hover:shadow-xl hover:shadow-pink-200/50 dark:hover:shadow-purple-500/20 hover:bg-white dark:hover:bg-gray-800 cursor-pointer ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}
-                style={{ transitionDelay: `${500 + index * 100}ms` }}
-                onClick={() => {
-                  toast.success('Cam kết vàng!', {
-                    description: commitment.slice(0, 50) + '...',
-                  });
-                }}
-              >
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-6 h-6 text-pink-500 shrink-0 mt-0.5 transition-all duration-300 group-hover:text-purple-500 group-hover:scale-125 group-hover:rotate-12" />
-                  <p className="text-foreground transition-colors duration-300 group-hover:text-pink-600 dark:group-hover:text-pink-400">{commitment}</p>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </section>
+        <DonateFormSection
+          donateAmount={donateAmount}
+          donorName={donorName}
+          donorMessage={donorMessage}
+          isCreatingPayment={isCreatingPayment}
+          onAmountChange={handleAmountChange}
+          onNameChange={setDonorName}
+          onMessageChange={setDonorMessage}
+          onDonate={handleDonateClick}
+        />
 
-        {/* Comparison */}
-        <section className="max-w-5xl mx-auto px-4 mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-foreground">
-            So Sánh Với &quot;Người Khác&quot;
-          </h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Nguoi Khac */}
-            <Card className="p-6 bg-red-50/80 backdrop-blur-sm border-2 border-red-200 hover:scale-105 transition-all duration-300">
-              <div className="flex items-center gap-2 mb-4">
-                <XCircle className="w-8 h-8 text-red-500" />
-                <h3 className="text-2xl font-bold text-red-600">Người Khác</h3>
-              </div>
-              <ul className="space-y-3">
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 mt-1">❌</span>
-                  <span className="text-red-700">
-                    Sao kê sau 3 năm (hoặc không bao giờ)
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 mt-1">❌</span>
-                  <span className="text-red-700">
-                    File Excel blur mờ như ảnh ma
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 mt-1">❌</span>
-                  <span className="text-red-700">
-                    Số liệu &quot;làm tròn&quot; theo kiểu 1 + 1 = 3
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 mt-1">❌</span>
-                  <span className="text-red-700">
-                    Block người hỏi nhanh như chớp
-                  </span>
-                </li>
-              </ul>
-            </Card>
-
-            {/* Nuoi Toi */}
-            <Card className="p-6 bg-green-50/80 backdrop-blur-sm border-2 border-green-200 hover:scale-105 transition-all duration-300">
-              <div className="flex items-center gap-2 mb-4">
-                <CheckCircle2 className="w-8 h-8 text-green-500" />
-                <h3 className="text-2xl font-bold text-green-600">Nuôi Tôi</h3>
-              </div>
-              <ul className="space-y-3">
-                <li className="flex items-start gap-2">
-                  <span className="text-green-500 mt-1">✅</span>
-                  <span className="text-green-700">
-                    Sao kê trước khi tiêu (để anh chị duyệt)
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-500 mt-1">✅</span>
-                  <span className="text-green-700">
-                    File Excel 4K Ultra HD, có chữ ký điện tử
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-500 mt-1">✅</span>
-                  <span className="text-green-700">
-                    Số liệu chính xác đến từng đồng
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-500 mt-1">✅</span>
-                  <span className="text-green-700">
-                    Trả lời inbox nhanh hơn cả chatbot
-                  </span>
-                </li>
-              </ul>
-            </Card>
-          </div>
-        </section>
-
-        {/* Donation CTA */}
-        <section id="donate-section" className="max-w-4xl mx-auto px-4 mb-16">
-          <Card className="p-8 md:p-12 bg-linear-to-br from-pink-500 via-purple-500 to-blue-500 text-white border-0 shadow-2xl animate-gradient overflow-hidden relative">
-            <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
-            <div className="relative z-10">
-              <h2 className="text-3xl md:text-5xl font-bold text-center mb-6 animate-pulse">
-                DONATE NGAY ĐI!
-              </h2>
-              <p className="text-center text-xl mb-8">
-                Cao nhân làm ơn giúp đỡ !!!
-              </p>
-
-              {/* Donation form */}
-              <div className="bg-white rounded-2xl p-6 md:p-8 max-w-md mx-auto mb-8 transform hover:scale-105 transition-all duration-300">
-                <div className="space-y-4">
-                  {/* Amount input */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Số tiền (VNĐ) *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={donateAmount}
-                        onChange={(e) => handleAmountChange(e.target.value)}
-                        placeholder="50.000"
-                        className="w-full px-4 py-3 text-lg font-bold text-pink-600 border-2 border-pink-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors bg-pink-50/50"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">đ</span>
-                    </div>
-                    {/* Quick amount buttons */}
-                    <div className="flex gap-2 mt-2">
-                      {[10000, 50000, 100000, 500000].map((amt) => (
-                        <button
-                          key={amt}
-                          type="button"
-                          onClick={() => handleAmountChange(String(amt))}
-                          className="flex-1 py-1.5 text-xs font-medium text-pink-600 bg-pink-50 border border-pink-200 rounded-lg hover:bg-pink-100 transition-colors"
-                        >
-                          {amt.toLocaleString('vi-VN')}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Name input */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tên (tùy chọn)
-                    </label>
-                    <input
-                      type="text"
-                      value={donorName}
-                      onChange={(e) => setDonorName(e.target.value)}
-                      placeholder="Ẩn danh"
-                      className="w-full px-4 py-2 text-gray-700 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors"
-                    />
-                  </div>
-
-                  {/* Message input */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Lời nhắn (tùy chọn)
-                    </label>
-                    <input
-                      type="text"
-                      value={donorMessage}
-                      onChange={(e) => setDonorMessage(e.target.value)}
-                      placeholder="Cố lên nhé!"
-                      className="w-full px-4 py-2 text-gray-700 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button
-                  size="lg"
-                  onClick={handleDonateClick}
-                  disabled={isCreatingPayment}
-                  className="bg-white text-pink-600 hover:bg-gray-100 font-bold text-lg transform hover:scale-110 transition-all duration-300 hover:shadow-2xl disabled:opacity-70 disabled:hover:scale-100"
-                >
-                  {isCreatingPayment ? (
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  ) : (
-                    <Heart className="w-5 h-5 mr-2 animate-bounce" />
-                  )}
-                  {isCreatingPayment ? 'ĐANG TẠO MÃ QR...' : 'TÔI MUỐN NUÔI BẠN!'}
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </section>
-
-        {/* Expense Breakdown */}
-        <section className="max-w-4xl mx-auto px-4 mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-foreground">
-            <span className="inline-block animate-bounce">📈</span> Tôi Sẽ Dùng
-            Tiền Vào Đâu?
-          </h2>
-          <Card className="p-6 md:p-8 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
-            {/* Pie Chart */}
-            <div className="mb-8">
-              <div className="h-64 md:h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieChartData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={2}
-                      dataKey="value"
-                      animationBegin={0}
-                      animationDuration={1000}
-                    >
-                      {pieChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value: number, name: string) => [`${value}%`, name]}
-                      contentStyle={{
-                        borderRadius: '8px',
-                        border: 'none',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              {/* Legend */}
-              <div className="flex flex-wrap justify-center gap-4 mt-4">
-                {displayExpenses.map((expense, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <div
-                      className={`w-3 h-3 rounded-full ${expense.color}`}
-                    />
-                    <span className="text-sm text-muted-foreground">
-                      {expense.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Detailed breakdown */}
-            <div className="space-y-6">
-              {displayExpenses.map((expense, index) => (
-                <div key={index} className="group">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl font-bold text-foreground">
-                        {expense.percentage}%
-                      </span>
-                      <div>
-                        <div className="font-bold text-foreground">
-                          {expense.label}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {expense.description}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="h-3 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${expense.color} transition-all duration-1000 group-hover:animate-pulse`}
-                      style={{
-                        width: `${expense.percentage}%`,
-                        transitionDelay: `${index * 100}ms`,
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </section>
+        <ExpenseBreakdown
+          expenses={expenses}
+          defaultExpenses={defaultExpenses}
+        />
 
         {/* Message from heart */}
         <section className="max-w-4xl mx-auto px-4 mb-16">
@@ -1152,7 +674,6 @@ export default function NuoiToiPage() {
 
       {/* Floating Action Buttons */}
       <div className="fixed bottom-6 right-6 z-40 flex flex-col gap-3">
-        {/* Scroll to Top Button */}
         <button
           onClick={scrollToTop}
           className={`p-3 rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-2 border-purple-200 dark:border-purple-500 shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-purple-300 dark:hover:shadow-purple-500/30 ${showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}
@@ -1161,7 +682,6 @@ export default function NuoiToiPage() {
           <ArrowUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
         </button>
 
-        {/* Floating Donate Button */}
         <button
           onClick={scrollToQRCode}
           className="group p-4 rounded-full bg-linear-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-300/50 dark:shadow-pink-500/30 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-pink-400/50 animate-bounce"
@@ -1181,84 +701,14 @@ export default function NuoiToiPage() {
         </div>
       )}
 
-      {/* Payment QR Dialog */}
-      <Dialog
+      <PaymentDialog
         open={showDialog}
-        onOpenChange={(open) => {
-          setShowDialog(open);
-          if (!open) {
-            // Stop polling when dialog closes
-            setPaymentStatus('idle');
-            setPaymentQR(null);
-            setPaymentOrderCode(null);
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-md bg-linear-to-br from-pink-100 via-purple-100 to-blue-100 border-4 border-pink-300">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-center bg-linear-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
-              {isCreatingPayment
-                ? 'Đang tạo mã QR...'
-                : paymentStatus === 'error'
-                  ? 'Có lỗi xảy ra'
-                  : 'Quét mã để thanh toán'}
-            </DialogTitle>
-            <DialogDescription asChild>
-              <div className="text-center pt-4 space-y-4">
-                {isCreatingPayment && (
-                  <div className="flex flex-col items-center gap-4 py-8">
-                    <Loader2 className="w-12 h-12 text-pink-500 animate-spin" />
-                    <span className="text-lg text-muted-foreground">
-                      Đang kết nối PayOS...
-                    </span>
-                  </div>
-                )}
-
-                {paymentStatus === 'error' && !isCreatingPayment && (
-                  <div className="py-8 space-y-4">
-                    <div className="text-5xl">😢</div>
-                    <p className="text-lg text-muted-foreground">
-                      Không thể tạo mã thanh toán. Vui lòng thử lại.
-                    </p>
-                    <Button
-                      onClick={() => {
-                        setShowDialog(false);
-                        setPaymentStatus('idle');
-                      }}
-                      className="bg-pink-500 hover:bg-pink-600 text-white"
-                    >
-                      Đóng
-                    </Button>
-                  </div>
-                )}
-
-                {paymentQR && paymentStatus === 'pending' && (
-                  <>
-                    <div className="bg-white rounded-xl p-4 mx-auto inline-block">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={paymentQR}
-                        alt="Payment QR Code"
-                        className="w-64 h-64 mx-auto"
-                      />
-                    </div>
-                    <div className="text-2xl font-bold text-pink-600">
-                      {Number(donateAmount.replace(/\D/g, '')).toLocaleString('vi-VN')}đ
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Mở app ngân hàng và quét mã QR để thanh toán
-                    </p>
-                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Đang chờ thanh toán...</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={handleDialogOpenChange}
+        isCreatingPayment={isCreatingPayment}
+        paymentStatus={paymentStatus}
+        paymentQR={paymentQR}
+        donateAmount={donateAmount}
+      />
 
       <style jsx global>{`
         @keyframes gradient {

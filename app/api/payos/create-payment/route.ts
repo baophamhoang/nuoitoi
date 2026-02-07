@@ -7,9 +7,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { amount, name, message } = body;
 
-    if (!amount || amount < 1000) {
+    if (!amount || amount < 2000) {
       return NextResponse.json(
-        { error: 'Số tiền tối thiểu là 1.000đ' },
+        { error: 'Số tiền tối thiểu là 2.000đ' },
         { status: 400 }
       );
     }
