@@ -2,14 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
-import {
-  Heart,
-  Moon,
-  Sun,
-  Share2,
-  ArrowUp,
-  Gift,
-} from 'lucide-react';
+import { Heart, Moon, Sun, Share2, ArrowUp, Gift } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import {
@@ -56,7 +49,9 @@ export default function NuoiToiPage() {
   const [isVisible, setIsVisible] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
+  const [celebrationMessage, setCelebrationMessage] = useState<string | null>(
+    null,
+  );
   const [lastMilestone, setLastMilestone] = useState(0);
   const [isHoveringDonations, setIsHoveringDonations] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -68,7 +63,9 @@ export default function NuoiToiPage() {
   const [paymentQR, setPaymentQR] = useState<string | null>(null);
   const [paymentOrderCode, setPaymentOrderCode] = useState<number | null>(null);
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'pending' | 'paid' | 'error'>('idle');
+  const [paymentStatus, setPaymentStatus] = useState<
+    'idle' | 'pending' | 'paid' | 'error'
+  >('idle');
   const donationsListRef = useRef<HTMLDivElement>(null);
   const scrollDirectionRef = useRef<'down' | 'up'>('down');
   const scrollAnimationRef = useRef<number | null>(null);
@@ -126,6 +123,13 @@ export default function NuoiToiPage() {
           expensesRes.json(),
         ]);
 
+        console.log(
+          'donationsData, statsData, expensesData :>> ',
+          donationsData,
+          statsData,
+          expensesData,
+        );
+
         if (donationsData.donations) {
           setRecentDonations(donationsData.donations);
         }
@@ -134,7 +138,10 @@ export default function NuoiToiPage() {
           setTotalDonations(statsData.totalAmount || 0);
           setDonationCount(statsData.donationCount || 0);
           setMonthlyGoal(statsData.monthlyGoal || 10000000);
-          const percentage = ((statsData.totalAmount || 0) / (statsData.monthlyGoal || 10000000)) * 100;
+          const percentage =
+            ((statsData.totalAmount || 0) /
+              (statsData.monthlyGoal || 10000000)) *
+            100;
           if (percentage >= 100) setLastMilestone(100);
           else if (percentage >= 75) setLastMilestone(75);
           else if (percentage >= 50) setLastMilestone(50);
@@ -156,7 +163,9 @@ export default function NuoiToiPage() {
 
   // Supabase realtime subscription for donations
   useEffect(() => {
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+    const supabaseKey =
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !supabaseKey) {
       return;
     }
@@ -185,7 +194,9 @@ export default function NuoiToiPage() {
             time: 'Vừa xong',
           };
 
-          setRecentDonations((prev) => [formattedDonation, ...prev].slice(0, 20));
+          setRecentDonations((prev) =>
+            [formattedDonation, ...prev].slice(0, 20),
+          );
 
           setTotalDonations((prev) => {
             const newTotal = prev + newDonation.amount;
@@ -199,18 +210,18 @@ export default function NuoiToiPage() {
             {
               description: newDonation.message || 'Cảm ơn bạn!',
               duration: 5000,
-            }
+            },
           );
 
           triggerConfetti();
-        }
+        },
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Dark mode effect
@@ -246,7 +257,8 @@ export default function NuoiToiPage() {
   // Scroll progress indicator
   useEffect(() => {
     const handleScroll = () => {
-      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const totalHeight =
+        document.documentElement.scrollHeight - window.innerHeight;
       const progress = (window.scrollY / totalHeight) * 100;
       setScrollProgress(progress);
       setShowScrollTop(window.scrollY > 500);
@@ -268,6 +280,24 @@ export default function NuoiToiPage() {
           setPaymentStatus('paid');
           setShowDialog(false);
           triggerMegaCelebration();
+
+          try {
+            await fetch('/api/donations', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                amount: Number(donateAmount.replace(/\D/g, '')),
+                name: donorName || undefined,
+                message: donorMessage || undefined,
+              }),
+            });
+          } catch (error) {
+            toast.error(
+              'Chưa thể ghi nhận donation vào hệ thống. Chúng tôi sẽ cập nhật sau.',
+            );
+            console.error('Failed to record donation:', error);
+          }
+
           toast.success('Thanh toán thành công!', {
             description: 'Cảm ơn bạn đã ủng hộ!',
             duration: 8000,
@@ -308,25 +338,31 @@ export default function NuoiToiPage() {
   }, [paymentStatus, paymentOrderCode]);
 
   // Check for milestone achievements
-  const checkMilestone = useCallback((newTotal: number) => {
-    const percentage = (newTotal / monthlyGoal) * 100;
-    const milestones = [
-      { threshold: 25, message: '🎉 Đạt 25%! Cảm ơn các bạn!' },
-      { threshold: 50, message: '🔥 Nửa đường rồi! 50% hoàn thành!' },
-      { threshold: 75, message: '🚀 75%! Sắp về đích!' },
-      { threshold: 100, message: '🏆 HOÀN THÀNH! Cảm ơn tất cả!' },
-    ];
+  const checkMilestone = useCallback(
+    (newTotal: number) => {
+      const percentage = (newTotal / monthlyGoal) * 100;
+      const milestones = [
+        { threshold: 25, message: '🎉 Đạt 25%! Cảm ơn các bạn!' },
+        { threshold: 50, message: '🔥 Nửa đường rồi! 50% hoàn thành!' },
+        { threshold: 75, message: '🚀 75%! Sắp về đích!' },
+        { threshold: 100, message: '🏆 HOÀN THÀNH! Cảm ơn tất cả!' },
+      ];
 
-    for (const milestone of milestones) {
-      if (percentage >= milestone.threshold && lastMilestone < milestone.threshold) {
-        setLastMilestone(milestone.threshold);
-        setCelebrationMessage(milestone.message);
-        triggerMegaCelebration();
-        setTimeout(() => setCelebrationMessage(null), 4000);
-        break;
+      for (const milestone of milestones) {
+        if (
+          percentage >= milestone.threshold &&
+          lastMilestone < milestone.threshold
+        ) {
+          setLastMilestone(milestone.threshold);
+          setCelebrationMessage(milestone.message);
+          triggerMegaCelebration();
+          setTimeout(() => setCelebrationMessage(null), 4000);
+          break;
+        }
       }
-    }
-  }, [lastMilestone, monthlyGoal]);
+    },
+    [lastMilestone, monthlyGoal],
+  );
 
   const handleDonateClick = async () => {
     const amount = Number(donateAmount.replace(/\D/g, ''));
@@ -403,7 +439,7 @@ export default function NuoiToiPage() {
         });
       } else {
         await navigator.clipboard.writeText(
-          `${shareData.title}\n${shareData.text}\n${shareData.url}`
+          `${shareData.title}\n${shareData.text}\n${shareData.url}`,
         );
         toast.success('Link đã được copy!', {
           description: 'Chia sẻ cho bạn bè nhé! 🎉',
@@ -518,7 +554,7 @@ export default function NuoiToiPage() {
       style={{
         background: darkMode
           ? 'linear-gradient(to bottom right, #111827, #581c87, #111827)'
-          : 'linear-gradient(to bottom right, #fdf2f8, #f5f3ff, #eff6ff)'
+          : 'linear-gradient(to bottom right, #fdf2f8, #f5f3ff, #eff6ff)',
       }}
     >
       {/* Scroll Progress Bar */}
@@ -552,7 +588,9 @@ export default function NuoiToiPage() {
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-3 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-pink-200 dark:border-pink-500 hover:scale-110 transition-all duration-300 shadow-lg hover:shadow-pink-200 dark:hover:shadow-pink-500/30"
-              aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-label={
+                darkMode ? 'Switch to light mode' : 'Switch to dark mode'
+              }
             >
               {darkMode ? (
                 <Sun className="w-5 h-5 text-yellow-500" />
@@ -625,8 +663,8 @@ export default function NuoiToiPage() {
             <div className="prose prose-lg max-w-none text-center">
               <p className="text-lg text-muted-foreground mb-4">
                 Trong thời đại mà{' '}
-                <strong className="text-pink-600">&quot;từ thiện&quot;</strong> đã trở
-                thành từ nhạy cảm,
+                <strong className="text-pink-600">&quot;từ thiện&quot;</strong>{' '}
+                đã trở thành từ nhạy cảm,
               </p>
               <p className="text-2xl font-bold text-foreground mb-4">
                 Tôi xin khẳng định:{' '}
