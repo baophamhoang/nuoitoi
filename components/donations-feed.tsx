@@ -3,14 +3,7 @@
 import { forwardRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-
-interface Donation {
-  id: string;
-  name: string;
-  amount: number;
-  message: string;
-  time: string;
-}
+import type { Donation } from '@/lib/types';
 
 interface DonationsFeedProps {
   donations: Donation[];
