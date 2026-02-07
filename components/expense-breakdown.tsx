@@ -2,27 +2,14 @@
 
 import { Card } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-
-interface ExpenseCategory {
-  id: string;
-  percentage: number;
-  label: string;
-  description: string;
-  color: string;
-  chartColor: string;
-  spent: number;
-  budget: number;
-}
+import type { ExpenseCategory } from '@/lib/types';
 
 interface ExpenseBreakdownProps {
   expenses: ExpenseCategory[];
-  defaultExpenses: ExpenseCategory[];
 }
 
-export function ExpenseBreakdown({ expenses, defaultExpenses }: ExpenseBreakdownProps) {
-  const displayExpenses = expenses.length > 0 ? expenses : defaultExpenses;
-
-  const pieChartData = displayExpenses.map((expense) => ({
+export function ExpenseBreakdown({ expenses }: ExpenseBreakdownProps) {
+  const pieChartData = expenses.map((expense) => ({
     name: expense.label,
     value: expense.percentage,
     color: expense.chartColor,
@@ -68,7 +55,7 @@ export function ExpenseBreakdown({ expenses, defaultExpenses }: ExpenseBreakdown
           </div>
           {/* Legend */}
           <div className="flex flex-wrap justify-center gap-4 mt-4">
-            {displayExpenses.map((expense, index) => (
+            {expenses.map((expense, index) => (
               <div key={index} className="flex items-center gap-2">
                 <div
                   className={`w-3 h-3 rounded-full ${expense.color}`}
@@ -83,7 +70,7 @@ export function ExpenseBreakdown({ expenses, defaultExpenses }: ExpenseBreakdown
 
         {/* Detailed breakdown */}
         <div className="space-y-6">
-          {displayExpenses.map((expense, index) => (
+          {expenses.map((expense, index) => (
             <div key={index} className="group">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">

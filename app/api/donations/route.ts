@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
+import { sanitizeInput } from '@/lib/sanitize';
 import type { Donation, DonationInsert } from '@/lib/supabase/types';
 
 // Helper function to format time ago
@@ -129,9 +130,9 @@ export async function POST(request: Request) {
     const supabase = await createClient();
 
     const insertData: DonationInsert = {
-      name: name || 'Ẩn danh',
+      name: sanitizeInput(name || 'Ẩn danh', 100),
       amount: Number(amount),
-      message: message || null,
+      message: message ? sanitizeInput(message, 500) : null,
     };
 
     const { data: donation, error } = await supabase
