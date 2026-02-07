@@ -1,21 +1,18 @@
 import { createServerClient } from '@supabase/ssr';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import type { Database } from './types';
-
-// Support both old (ANON_KEY) and new (PUBLISHABLE_DEFAULT_KEY) naming conventions
-function getSupabaseAnonKey(): string {
-  return (
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ||
-    ''
-  );
-}
+import {
+  getSupabaseAnonKey,
+  getSupabaseServiceRoleKey,
+  getSupabaseUrl,
+} from './env';
 
 export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    getSupabaseUrl(),
     getSupabaseAnonKey(),
     {
       cookies: {
@@ -32,6 +29,26 @@ export async function createClient() {
             // This can be ignored if you have middleware refreshing sessions.
           }
         },
+      },
+    }
+  );
+}
+
+export function createServiceClient() {
+  const serviceKey = getSupabaseServiceRoleKey();
+  const url = getSupabaseUrl();
+
+  if (!url || !serviceKey) {
+    throw new Error('Missing Supabase service role configuration');
+  }
+
+  return createSupabaseClient<Database>(
+    url,
+    serviceKey,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
       },
     }
   );

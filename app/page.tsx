@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Heart, Moon, Sun, Share2, ArrowUp, Gift } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { toast } from 'sonner';
 import {
   triggerConfetti,
@@ -163,10 +164,7 @@ export default function NuoiToiPage() {
 
   // Supabase realtime subscription for donations
   useEffect(() => {
-    const supabaseKey =
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !supabaseKey) {
+    if (!isSupabaseConfigured()) {
       return;
     }
 

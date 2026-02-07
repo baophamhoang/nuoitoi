@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { isSupabaseConfigured } from '@/lib/supabase/env';
 import type { Expense } from '@/lib/supabase/types';
 
 // Mock expense data for when Supabase is not configured
@@ -85,12 +86,6 @@ function formatExpenseResponse(categories: typeof mockExpenses.categories, month
     spendingPercentage: Number(((totalSpent / totalBudget) * 100).toFixed(1)),
     ...(isMock && { isMock: true }),
   };
-}
-
-// Helper to check if Supabase is configured (supports both old and new key names)
-function isSupabaseConfigured(): boolean {
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
-  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && supabaseKey);
 }
 
 // GET /api/expenses - Get expense breakdown

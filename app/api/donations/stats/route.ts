@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { isSupabaseConfigured } from '@/lib/supabase/env';
 import type { Donation } from '@/lib/supabase/types';
 
 // Mock stats data for when Supabase is not configured
@@ -11,12 +12,6 @@ const mockStats = {
   averageDonation: 52128,
   lastUpdated: new Date().toISOString(),
 };
-
-// Helper to check if Supabase is configured (supports both old and new key names)
-function isSupabaseConfigured(): boolean {
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
-  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && supabaseKey);
-}
 
 // GET /api/donations/stats - Get donation statistics
 export async function GET() {

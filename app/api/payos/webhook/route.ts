@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getPayOS, isPayOSConfigured } from '@/lib/payos';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
   try {
@@ -16,23 +16,17 @@ export async function POST(request: Request) {
     // code "00" means successful payment
     if (webhookData.code === '00') {
       // Insert donation into Supabase
-      const supabaseKey =
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+      const supabase = createServiceClient();
 
-      if (process.env.NEXT_PUBLIC_SUPABASE_URL && supabaseKey) {
-        const supabase = await createClient();
+      const name =
+        webhookData.counterAccountName || 'Ẩn danh';
 
-        const name =
-          webhookData.counterAccountName || 'Ẩn danh';
-
-        await supabase.from('donations').insert({
-          name,
-          amount: webhookData.amount,
-          message: webhookData.description || null,
-          verified: true,
-        } as never);
-      }
+      await supabase.from('donations').insert({
+        name,
+        amount: webhookData.amount,
+        message: webhookData.description || null,
+        verified: true,
+      } as never);
     }
 
     // PayOS requires 200 OK response

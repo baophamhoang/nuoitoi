@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { isSupabaseConfigured } from '@/lib/supabase/env';
 import type { Donation, DonationInsert } from '@/lib/supabase/types';
 
 // Helper function to format time ago
@@ -29,12 +30,6 @@ const mockDonations = [
   { id: '5', name: 'Ẩn danh', amount: 50000, message: 'Mua mì tôm đi!', created_at: new Date(Date.now() - 20 * 60 * 1000).toISOString() },
 ];
 
-// Helper to check if Supabase is configured (supports both old and new key names)
-function isSupabaseConfigured(): boolean {
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
-  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && supabaseKey);
-}
-
 // GET /api/donations - Get recent donations
 export async function GET() {
   // Check if Supabase is configured
@@ -56,7 +51,7 @@ export async function GET() {
   }
 
   try {
-    const supabase = await createClient();
+    const supabase = createServiceClient();
 
     const { data: donations, error } = await supabase
       .from('donations')
