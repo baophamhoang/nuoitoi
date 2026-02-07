@@ -36,6 +36,9 @@ No test framework is currently configured.
 - `GET/POST /api/donations` - List (20 most recent) and create donations
 - `GET /api/donations/stats` - Donation statistics (total, count, weekly donors, progress)
 - `GET /api/expenses` - Current month's expense categories with budget tracking
+- `POST /api/payos/create-payment` - Create PayOS payment link, returns QR code
+- `POST /api/payos/webhook` - PayOS webhook receiver, inserts donation on success
+- `GET /api/payos/status/[orderCode]` - Poll payment status by order code
 
 ### Data Flow
 All API endpoints gracefully fall back to mock data when Supabase is not configured, enabling local development without database setup.
@@ -48,9 +51,14 @@ The main page subscribes to Supabase real-time changes on the donations table. N
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+# PayOS payment integration (server-side only)
+PAYOS_CLIENT_ID=your-client-id
+PAYOS_API_KEY=your-api-key
+PAYOS_CHECKSUM_KEY=your-checksum-key
 ```
 
-The app works without these (uses mock data).
+The app works without these (uses mock data). PayOS endpoints return mock responses when credentials are not set.
 
 ## Conventions
 

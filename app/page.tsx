@@ -25,8 +25,8 @@ import {
   Share2,
   ArrowUp,
   Gift,
+  Loader2,
 } from 'lucide-react';
-import Image from 'next/image';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -72,6 +72,13 @@ export default function NuoiToiPage() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [typedText, setTypedText] = useState('');
+  const [donateAmount, setDonateAmount] = useState('');
+  const [donorName, setDonorName] = useState('');
+  const [donorMessage, setDonorMessage] = useState('');
+  const [paymentQR, setPaymentQR] = useState<string | null>(null);
+  const [paymentOrderCode, setPaymentOrderCode] = useState<number | null>(null);
+  const [isCreatingPayment, setIsCreatingPayment] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'pending' | 'paid' | 'error'>('idle');
   const donationsListRef = useRef<HTMLDivElement>(null);
   const scrollDirectionRef = useRef<'down' | 'up'>('down');
   const scrollAnimationRef = useRef<number | null>(null);
@@ -269,6 +276,41 @@ export default function NuoiToiPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Poll payment status
+  useEffect(() => {
+    if (paymentStatus !== 'pending' || !paymentOrderCode) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/payos/status/${paymentOrderCode}`);
+        const data = await res.json();
+
+        if (data.status === 'PAID') {
+          setPaymentStatus('paid');
+          setShowDialog(false);
+          triggerMegaCelebration();
+          toast.success('Thanh toán thành công!', {
+            description: 'Cảm ơn bạn đã ủng hộ!',
+            duration: 8000,
+          });
+          // Reset form
+          setDonateAmount('');
+          setDonorName('');
+          setDonorMessage('');
+          setPaymentQR(null);
+          setPaymentOrderCode(null);
+        } else if (data.status === 'CANCELLED' || data.status === 'EXPIRED') {
+          setPaymentStatus('error');
+          toast.error('Thanh toán đã hủy hoặc hết hạn');
+        }
+      } catch {
+        // Silently ignore polling errors
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [paymentStatus, paymentOrderCode]);
+
   // Check for milestone achievements
   const checkMilestone = useCallback((newTotal: number) => {
     const percentage = (newTotal / monthlyGoal) * 100;
@@ -290,9 +332,59 @@ export default function NuoiToiPage() {
     }
   }, [lastMilestone, monthlyGoal]);
 
-  const handleDonateClick = () => {
-    triggerConfettiCannon();
+  const handleDonateClick = async () => {
+    const amount = Number(donateAmount.replace(/\D/g, ''));
+    if (!amount || amount < 1000) {
+      toast.error('Vui lòng nhập số tiền hợp lệ', {
+        description: 'Tối thiểu 1.000đ',
+      });
+      return;
+    }
+
+    setIsCreatingPayment(true);
+    setPaymentStatus('idle');
+    setPaymentQR(null);
     setShowDialog(true);
+
+    try {
+      const res = await fetch('/api/payos/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount,
+          name: donorName || undefined,
+          message: donorMessage || undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Payment creation failed');
+      }
+
+      setPaymentQR(data.qrCode);
+      setPaymentOrderCode(data.orderCode);
+      setPaymentStatus('pending');
+    } catch (error) {
+      console.error('Payment error:', error);
+      setPaymentStatus('error');
+      toast.error('Không thể tạo mã QR', {
+        description: 'Vui lòng thử lại sau.',
+      });
+    } finally {
+      setIsCreatingPayment(false);
+    }
+  };
+
+  // Format VND input
+  const handleAmountChange = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits) {
+      setDonateAmount(Number(digits).toLocaleString('vi-VN'));
+    } else {
+      setDonateAmount('');
+    }
   };
 
   const scrollToQRCode = () => {
@@ -831,13 +923,67 @@ export default function NuoiToiPage() {
                 Cao nhân làm ơn giúp đỡ !!!
               </p>
 
-              {/* QR Code placeholder */}
-              <div className="bg-white rounded-2xl p-8 max-w-md mx-auto mb-8 transform hover:scale-105 transition-all duration-300 hover:rotate-2">
-                <div className="aspect-square bg-linear-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center mb-4 relative">
-                  <Image alt="QR-code" src="/momo.jpg" fill={true} className="rounded-xl object-cover" />
-                </div>
-                <div className="text-center text-gray-600 font-medium">
-                  Quét mã QR để nuôi tôi nhé!
+              {/* Donation form */}
+              <div className="bg-white rounded-2xl p-6 md:p-8 max-w-md mx-auto mb-8 transform hover:scale-105 transition-all duration-300">
+                <div className="space-y-4">
+                  {/* Amount input */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Số tiền (VNĐ) *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={donateAmount}
+                        onChange={(e) => handleAmountChange(e.target.value)}
+                        placeholder="50.000"
+                        className="w-full px-4 py-3 text-lg font-bold text-pink-600 border-2 border-pink-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors bg-pink-50/50"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">đ</span>
+                    </div>
+                    {/* Quick amount buttons */}
+                    <div className="flex gap-2 mt-2">
+                      {[10000, 50000, 100000, 500000].map((amt) => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => handleAmountChange(String(amt))}
+                          className="flex-1 py-1.5 text-xs font-medium text-pink-600 bg-pink-50 border border-pink-200 rounded-lg hover:bg-pink-100 transition-colors"
+                        >
+                          {amt.toLocaleString('vi-VN')}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Name input */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tên (tùy chọn)
+                    </label>
+                    <input
+                      type="text"
+                      value={donorName}
+                      onChange={(e) => setDonorName(e.target.value)}
+                      placeholder="Ẩn danh"
+                      className="w-full px-4 py-2 text-gray-700 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors"
+                    />
+                  </div>
+
+                  {/* Message input */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Lời nhắn (tùy chọn)
+                    </label>
+                    <input
+                      type="text"
+                      value={donorMessage}
+                      onChange={(e) => setDonorMessage(e.target.value)}
+                      placeholder="Cố lên nhé!"
+                      className="w-full px-4 py-2 text-gray-700 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -845,19 +991,15 @@ export default function NuoiToiPage() {
                 <Button
                   size="lg"
                   onClick={handleDonateClick}
-                  className="bg-white text-pink-600 hover:bg-gray-100 font-bold text-lg transform hover:scale-110 transition-all duration-300 hover:shadow-2xl animate-pulse"
+                  disabled={isCreatingPayment}
+                  className="bg-white text-pink-600 hover:bg-gray-100 font-bold text-lg transform hover:scale-110 transition-all duration-300 hover:shadow-2xl disabled:opacity-70 disabled:hover:scale-100"
                 >
-                  <Heart className="w-5 h-5 mr-2 animate-bounce" />
-                  TÔI MUỐN NUÔI BẠN!
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={handleDonateClick}
-                  className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-pink-600 font-bold text-lg transform hover:scale-110 transition-all duration-300"
-                >
-                  <Sparkles className="w-5 h-5 mr-2 animate-spin" />
-                  SAO KÊ NGAY
+                  {isCreatingPayment ? (
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  ) : (
+                    <Heart className="w-5 h-5 mr-2 animate-bounce" />
+                  )}
+                  {isCreatingPayment ? 'ĐANG TẠO MÃ QR...' : 'TÔI MUỐN NUÔI BẠN!'}
                 </Button>
               </div>
             </div>
@@ -1039,45 +1181,79 @@ export default function NuoiToiPage() {
         </div>
       )}
 
-      {/* Dialog */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      {/* Payment QR Dialog */}
+      <Dialog
+        open={showDialog}
+        onOpenChange={(open) => {
+          setShowDialog(open);
+          if (!open) {
+            // Stop polling when dialog closes
+            setPaymentStatus('idle');
+            setPaymentQR(null);
+            setPaymentOrderCode(null);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-md bg-linear-to-br from-pink-100 via-purple-100 to-blue-100 border-4 border-pink-300">
           <DialogHeader>
-            <DialogTitle className="text-3xl font-bold text-center bg-linear-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
-              <span className="inline-block animate-bounce text-4xl mb-2">
-                🚧
-              </span>
-              <br />
-              Chờ xíu nhé!
+            <DialogTitle className="text-2xl font-bold text-center bg-linear-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
+              {isCreatingPayment
+                ? 'Đang tạo mã QR...'
+                : paymentStatus === 'error'
+                  ? 'Có lỗi xảy ra'
+                  : 'Quét mã để thanh toán'}
             </DialogTitle>
             <DialogDescription asChild>
-              <div className="text-center text-lg pt-4 space-y-4">
-                <span className="block text-2xl font-bold text-foreground animate-pulse">
-                  Bạn chờ xíu nha.
-                </span>
-                <span
-                  className="block text-2xl font-bold text-foreground animate-pulse"
-                  style={{ animationDelay: '150ms' }}
-                >
-                  Tôi code sắp xong rồi
-                </span>
-                <div className="flex justify-center gap-1 mt-6">
-                  <div
-                    className="w-3 h-3 bg-pink-500 rounded-full animate-bounce"
-                    style={{ animationDelay: '0ms' }}
-                  />
-                  <div
-                    className="w-3 h-3 bg-purple-500 rounded-full animate-bounce"
-                    style={{ animationDelay: '150ms' }}
-                  />
-                  <div
-                    className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"
-                    style={{ animationDelay: '300ms' }}
-                  />
-                </div>
-                <span className="block text-sm text-muted-foreground mt-6">
-                  (Quét đỡ QR code phía trên nhé! 😊)
-                </span>
+              <div className="text-center pt-4 space-y-4">
+                {isCreatingPayment && (
+                  <div className="flex flex-col items-center gap-4 py-8">
+                    <Loader2 className="w-12 h-12 text-pink-500 animate-spin" />
+                    <span className="text-lg text-muted-foreground">
+                      Đang kết nối PayOS...
+                    </span>
+                  </div>
+                )}
+
+                {paymentStatus === 'error' && !isCreatingPayment && (
+                  <div className="py-8 space-y-4">
+                    <div className="text-5xl">😢</div>
+                    <p className="text-lg text-muted-foreground">
+                      Không thể tạo mã thanh toán. Vui lòng thử lại.
+                    </p>
+                    <Button
+                      onClick={() => {
+                        setShowDialog(false);
+                        setPaymentStatus('idle');
+                      }}
+                      className="bg-pink-500 hover:bg-pink-600 text-white"
+                    >
+                      Đóng
+                    </Button>
+                  </div>
+                )}
+
+                {paymentQR && paymentStatus === 'pending' && (
+                  <>
+                    <div className="bg-white rounded-xl p-4 mx-auto inline-block">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={paymentQR}
+                        alt="Payment QR Code"
+                        className="w-64 h-64 mx-auto"
+                      />
+                    </div>
+                    <div className="text-2xl font-bold text-pink-600">
+                      {Number(donateAmount.replace(/\D/g, '')).toLocaleString('vi-VN')}đ
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Mở app ngân hàng và quét mã QR để thanh toán
+                    </p>
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Đang chờ thanh toán...</span>
+                    </div>
+                  </>
+                )}
               </div>
             </DialogDescription>
           </DialogHeader>
