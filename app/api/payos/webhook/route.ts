@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getPayOS, isPayOSConfigured } from '@/lib/payos';
 import { createServiceClient } from '@/lib/supabase/server';
+import { getPaymentData } from '@/lib/payment-cache';
 
 export async function POST(request: Request) {
   try {
@@ -18,13 +19,14 @@ export async function POST(request: Request) {
       // Insert donation into Supabase
       const supabase = createServiceClient();
 
-      const name =
-        webhookData.counterAccountName || 'Ẩn danh';
+      const cached = getPaymentData(webhookData.orderCode);
+      const name = cached?.name || webhookData.counterAccountName || 'Ẩn danh';
+      const message = cached?.message || webhookData.description || null;
 
       await supabase.from('donations').insert({
         name,
         amount: webhookData.amount,
-        message: webhookData.description || null,
+        message,
         verified: true,
       } as never);
     }

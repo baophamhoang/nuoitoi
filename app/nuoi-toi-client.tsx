@@ -20,8 +20,6 @@ import { DonationsFeed } from '@/components/donations-feed';
 import { FeaturesGrid } from '@/components/features-grid';
 import { CommitmentsSection } from '@/components/commitments-section';
 import { ComparisonSection } from '@/components/comparison-section';
-import { createDonation } from '@/app/actions/donations';
-
 import type { Donation, ExpenseCategory, DonationStats } from '@/lib/types';
 
 // Dynamic imports for heavy components (Recharts, Payment Dialog)
@@ -65,15 +63,9 @@ export default function NuoiToiClient({
     monthlyGoal,
     celebrationMessage,
     checkMilestone,
-    refetchDonations,
   } = useDonations({ initialDonations, initialStats });
 
-  const payment = usePayment({
-    onPaymentSuccess: async (amount, name, message) => {
-      await createDonation({ amount, name: name || undefined, message: message || undefined });
-      await refetchDonations();
-    },
-  });
+  const payment = usePayment();
 
   const { darkMode, toggleDarkMode } = useDarkMode();
   const autoScroll = useAutoScroll();

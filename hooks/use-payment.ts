@@ -1,14 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { triggerMegaCelebration } from '@/lib/confetti';
 
-interface UsePaymentOptions {
-  onPaymentSuccess?: (amount: number, name: string, message: string) => Promise<void>;
-}
-
-export function usePayment({ onPaymentSuccess }: UsePaymentOptions = {}) {
+export function usePayment() {
   const [paymentQR, setPaymentQR] = useState<string | null>(null);
   const [paymentOrderCode, setPaymentOrderCode] = useState<number | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'pending' | 'paid' | 'error'>('idle');
@@ -19,11 +15,6 @@ export function usePayment({ onPaymentSuccess }: UsePaymentOptions = {}) {
   const [donateAmount, setDonateAmount] = useState('');
   const [donorName, setDonorName] = useState('');
   const [donorMessage, setDonorMessage] = useState('');
-
-  // Snapshot of form data when payment is created (avoids stale closure issues)
-  const paymentDataRef = useRef<{ amount: number; name: string; message: string } | null>(null);
-  const onSuccessRef = useRef(onPaymentSuccess);
-  onSuccessRef.current = onPaymentSuccess;
 
   // Poll payment status
   useEffect(() => {
@@ -38,15 +29,6 @@ export function usePayment({ onPaymentSuccess }: UsePaymentOptions = {}) {
           setPaymentStatus('paid');
           setShowDialog(false);
           triggerMegaCelebration();
-
-          if (onSuccessRef.current && paymentDataRef.current) {
-            const { amount, name, message } = paymentDataRef.current;
-            try {
-              await onSuccessRef.current(amount, name, message);
-            } catch {
-              toast.error('Chưa thể ghi nhận donation vào hệ thống. Chúng tôi sẽ cập nhật sau.');
-            }
-          }
 
           toast.success('Thanh toán thành công!', {
             description: 'Cảm ơn bạn đã ủng hộ!',
@@ -72,7 +54,6 @@ export function usePayment({ onPaymentSuccess }: UsePaymentOptions = {}) {
       return;
     }
 
-    paymentDataRef.current = { amount, name: donorName, message: donorMessage };
     setIsCreatingPayment(true);
     setPaymentStatus('idle');
     setPaymentQR(null);
@@ -110,7 +91,6 @@ export function usePayment({ onPaymentSuccess }: UsePaymentOptions = {}) {
     setDonorMessage('');
     setPaymentQR(null);
     setPaymentOrderCode(null);
-    paymentDataRef.current = null;
   };
 
   const handleDialogOpenChange = (open: boolean) => {

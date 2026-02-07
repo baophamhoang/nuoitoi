@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getPayOS, isPayOSConfigured } from '@/lib/payos';
 import { sanitizeInput } from '@/lib/sanitize';
+import { setPaymentData } from '@/lib/payment-cache';
 import QRCode from 'qrcode';
 
 export async function POST(request: Request) {
@@ -41,6 +42,11 @@ export async function POST(request: Request) {
       cancelUrl: `${baseUrl}?payment=cancelled`,
       returnUrl: `${baseUrl}?payment=success`,
       buyerName: name || undefined,
+    });
+
+    setPaymentData(orderCode, {
+      name: name || '',
+      message: message || '',
     });
 
     // PayOS returns an EMVCo string, convert to data URI image
