@@ -3,10 +3,6 @@
 import { Card } from '@/components/ui/card';
 import { TrendingUp, Eye, DollarSign, Smartphone } from 'lucide-react';
 
-interface FeaturesGridProps {
-  isVisible: boolean;
-}
-
 const features = [
   {
     icon: TrendingUp,
@@ -36,7 +32,7 @@ const features = [
   },
 ];
 
-export function FeaturesGrid({ isVisible }: FeaturesGridProps) {
+export function FeaturesGrid() {
   return (
     <section className="max-w-6xl mx-auto px-4 mb-16">
       <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-foreground">
@@ -49,8 +45,8 @@ export function FeaturesGrid({ isVisible }: FeaturesGridProps) {
           return (
             <Card
               key={index}
-              className={`p-6 bg-white/80 backdrop-blur-sm border-2 hover:border-pink-300 transition-all duration-500 hover:scale-105 hover:shadow-2xl group cursor-pointer ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}
-              style={{ transitionDelay: `${300 + index * 100}ms` }}
+              className="p-6 bg-white/80 backdrop-blur-sm border-2 hover:border-pink-300 transition-all duration-300 hover:scale-105 hover:shadow-2xl group cursor-pointer animate-fade-left"
+              style={{ animationDelay: `${300 + index * 100}ms` }}
             >
               <div
                 className={`w-16 h-16 rounded-2xl bg-linear-to-br ${feature.color} flex items-center justify-center mb-4 group-hover:rotate-12 group-hover:scale-110 transition-all duration-300`}

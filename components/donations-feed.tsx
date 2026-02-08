@@ -8,14 +8,13 @@ import type { Donation } from '@/lib/types';
 interface DonationsFeedProps {
   donations: Donation[];
   isLoading: boolean;
-  isVisible: boolean;
   darkMode: boolean;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
 }
 
 export const DonationsFeed = forwardRef<HTMLDivElement, DonationsFeedProps>(
-  function DonationsFeed({ donations, isLoading, isVisible, darkMode, onMouseEnter, onMouseLeave }, ref) {
+  function DonationsFeed({ donations, isLoading, darkMode, onMouseEnter, onMouseLeave }, ref) {
     return (
       <section className="max-w-4xl mx-auto px-4 mb-16">
         <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 text-foreground">
@@ -54,9 +53,9 @@ export const DonationsFeed = forwardRef<HTMLDivElement, DonationsFeedProps>(
               donations.map((donation, index) => (
                 <div
                   key={donation.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border border-pink-100 dark:border-pink-800 transition-all duration-300 hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+                  className="flex items-center justify-between p-3 rounded-lg border border-pink-100 dark:border-pink-800 transition-all duration-300 hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 animate-fade-in"
                   style={{
-                    transitionDelay: `${index * 100}ms`,
+                    animationDelay: `${index * 100}ms`,
                     background: darkMode
                       ? 'linear-gradient(to right, rgba(157, 23, 77, 0.2), rgba(126, 34, 206, 0.2))'
                       : 'linear-gradient(to right, #fdf2f8, #faf5ff)'

@@ -9,7 +9,6 @@ interface HeroSectionProps {
   donationCount: number;
   monthlyGoal: number;
   isLoading: boolean;
-  isVisible: boolean;
   onScrollToQR: () => void;
   onDemoClick: (type: 'donate' | 'count') => void;
 }
@@ -19,14 +18,14 @@ export function HeroSection({
   donationCount,
   monthlyGoal,
   isLoading,
-  isVisible,
   onScrollToQR,
   onDemoClick,
 }: HeroSectionProps) {
   return (
     <section className="max-w-4xl mx-auto px-4 mb-16">
       <Card
-        className={`p-8 md:p-12 bg-white/80 backdrop-blur-sm border-2 shadow-2xl transition-all duration-1000 delay-200 hover:scale-105 hover:shadow-pink-200/50 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+        className="p-8 md:p-12 bg-white/80 backdrop-blur-sm border-2 shadow-2xl hover:scale-105 hover:shadow-pink-200/50 transition-all duration-300 animate-fade-up"
+        style={{ animationDelay: '200ms' }}
       >
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-6 bg-linear-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
           HÃY NUÔI TÔI

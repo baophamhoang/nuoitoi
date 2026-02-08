@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Card } from '@/components/ui/card';
 import { Heart, Moon, Sun, Share2, ArrowUp, Gift } from 'lucide-react';
@@ -51,8 +50,6 @@ export default function NuoiToiClient({
   initialStats,
   initialExpenses,
 }: NuoiToiClientProps) {
-  const [isVisible, setIsVisible] = useState(false);
-
   // Custom hooks — extracted from the old 780-line page.tsx
   const {
     recentDonations,
@@ -71,10 +68,6 @@ export default function NuoiToiClient({
   const autoScroll = useAutoScroll();
   const { scrollProgress, showScrollTop, scrollToTop } = useScrollProgress();
   const typedText = useTypingEffect('Minh Bạch 100% (Thật Đấy!)', 50, false);
-
-  useEffect(() => {
-    setIsVisible(true);
-  }, []);
 
   const scrollToQRCode = () => {
     document.getElementById('donate-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -141,7 +134,7 @@ export default function NuoiToiClient({
       <div className="relative z-10">
         {/* Header */}
         <header
-          className={`text-center pt-12 pb-8 px-4 transition-all duration-1000 relative ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10'}`}
+          className="text-center pt-12 pb-8 px-4 relative animate-fade-up"
         >
           <div className="absolute top-4 right-4 flex gap-2">
             <button
@@ -180,7 +173,6 @@ export default function NuoiToiClient({
           donationCount={donationCount}
           monthlyGoal={monthlyGoal}
           isLoading={false}
-          isVisible={isVisible}
           onScrollToQR={scrollToQRCode}
           onDemoClick={handleDemoClick}
         />
@@ -189,15 +181,14 @@ export default function NuoiToiClient({
           ref={autoScroll.listRef}
           donations={recentDonations}
           isLoading={false}
-          isVisible={isVisible}
           darkMode={darkMode}
           onMouseEnter={autoScroll.onMouseEnter}
           onMouseLeave={autoScroll.onMouseLeave}
         />
 
-        <FeaturesGrid isVisible={isVisible} />
+        <FeaturesGrid />
 
-        <CommitmentsSection isVisible={isVisible} />
+        <CommitmentsSection />
 
         <ComparisonSection />
 
