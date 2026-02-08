@@ -15,17 +15,17 @@ export const metadata: Metadata = {
       : 'http://localhost:3000',
   ),
   title: '🎉 Hãy nuôi tôi! 🎉',
-  description: 'Nuôi tôi đi pls! Pham Bao dev - minh bạch 100% từng đồng.',
+  description: 'Nuôi tôi đi pls! Pham Bao - minh bạch 100% từng đồng.',
   keywords: ['Pham Bao dev', 'Pham Bao nuoi toi', 'nuôi tôi', 'donate', 'minh bạch'],
   openGraph: {
     title: '🎉 Hãy nuôi tôi! 🎉',
-    description: 'Nuôi tôi đi pls! Pham Bao dev - minh bạch 100% từng đồng.',
+    description: 'Nuôi tôi đi pls! Pham Bao - minh bạch 100% từng đồng.',
     images: [{ url: '/momo.jpg' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: '🎉 Hãy nuôi tôi! 🎉',
-    description: 'Nuôi tôi đi pls! Pham Bao dev - minh bạch 100% từng đồng.',
+    description: 'Nuôi tôi đi pls! Pham Bao - minh bạch 100% từng đồng.',
     images: ['/momo.jpg'],
   },
   icons: {
