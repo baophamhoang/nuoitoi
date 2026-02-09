@@ -71,7 +71,7 @@ export const DonationsFeed = forwardRef<HTMLDivElement, DonationsFeedProps>(
                     <div className="min-w-0">
                       <div className="font-medium text-foreground truncate">{donation.name}</div>
                       {donation.message && (
-                        <div className="text-sm text-muted-foreground truncate">&quot;{donation.message}&quot;</div>
+                        <div className="text-sm text-muted-foreground truncate">&quot;{donation.message || "--"}&quot;</div>
                       )}
                     </div>
                   </div>

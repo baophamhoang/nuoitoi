@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
       const cached = getPaymentData(webhookData.orderCode);
       const name = cached?.name || webhookData.counterAccountName || 'Ẩn danh';
-      const message = cached?.message || webhookData.description || null;
+      const message = cached?.message || null;
 
       await supabase.from('donations').insert({
         name,
