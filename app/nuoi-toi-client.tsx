@@ -2,7 +2,8 @@
 
 import dynamic from 'next/dynamic';
 import { Card } from '@/components/ui/card';
-import { Heart, Moon, Sun, Share2, ArrowUp, Gift } from 'lucide-react';
+import { useState } from 'react';
+import { Heart, Moon, Sun, Share2, ArrowUp, Gift, Snowflake } from 'lucide-react';
 import { toast } from 'sonner';
 import { triggerConfetti, triggerEmojiConfetti } from '@/lib/confetti';
 
@@ -19,6 +20,7 @@ import { DonationsFeed } from '@/components/donations-feed';
 import { FeaturesGrid } from '@/components/features-grid';
 import { CommitmentsSection } from '@/components/commitments-section';
 import { ComparisonSection } from '@/components/comparison-section';
+import { SnowCanvas } from '@/components/snow-canvas';
 import type { Donation, ExpenseCategory, DonationStats } from '@/lib/types';
 
 // Dynamic imports for heavy components (Recharts, Payment Dialog)
@@ -68,6 +70,7 @@ export default function NuoiToiClient({
   const autoScroll = useAutoScroll();
   const { scrollProgress, showScrollTop, scrollToTop } = useScrollProgress();
   const typedText = useTypingEffect('Minh Bạch 100% (Thật Đấy!)', 50, false);
+  const [snowing, setSnowing] = useState(false);
 
   const scrollToQRCode = () => {
     document.getElementById('donate-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -131,12 +134,22 @@ export default function NuoiToiClient({
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-linear-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse delay-500" />
       </div>
 
+      {/* Snow overlay */}
+      {snowing && <SnowCanvas />}
+
       <div className="relative z-10">
         {/* Header */}
         <header
           className="text-center pt-12 pb-8 px-4 relative animate-fade-up"
         >
           <div className="absolute top-4 right-4 flex gap-2">
+            <button
+              onClick={() => setSnowing((s) => !s)}
+              className={`p-3 rounded-full backdrop-blur-sm border-2 hover:scale-110 transition-all duration-300 shadow-lg ${snowing ? 'bg-blue-100 dark:bg-blue-900/80 border-blue-300 dark:border-blue-400 shadow-blue-200 dark:shadow-blue-500/30' : 'bg-white/80 dark:bg-gray-800/80 border-pink-200 dark:border-pink-500 hover:shadow-pink-200 dark:hover:shadow-pink-500/30'}`}
+              aria-label={snowing ? 'Stop snow' : 'Let it snow'}
+            >
+              <Snowflake className={`w-5 h-5 transition-all duration-300 ${snowing ? 'text-blue-500 animate-spin' : 'text-blue-400 dark:text-blue-300'}`} style={snowing ? { animationDuration: '3s' } : undefined} />
+            </button>
             <button
               onClick={handleShare}
               className="p-3 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-pink-200 dark:border-pink-500 hover:scale-110 transition-all duration-300 shadow-lg hover:shadow-pink-200 dark:hover:shadow-pink-500/30"
