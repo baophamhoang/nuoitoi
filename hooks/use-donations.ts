@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { toast } from 'sonner';
 import { triggerConfetti, triggerMegaCelebration } from '@/lib/confetti';
 import type { Donation, DonationStats } from '@/lib/types';
@@ -50,52 +48,48 @@ export function useDonations({ initialDonations, initialStats }: UseDonationsOpt
     [lastMilestone, monthlyGoal],
   );
 
-  // Supabase realtime subscription
+  // SSE real-time subscription replacing Supabase postgres_changes
   useEffect(() => {
-    if (!isSupabaseConfigured()) return;
+    const eventSource = new EventSource('/api/donations/stream');
 
-    const supabase = createClient();
-    const channel = supabase
-      .channel('donations-realtime')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'donations' },
-        (payload) => {
-          const newDonation = payload.new as {
-            id: string;
-            name: string;
-            amount: number;
-            message: string | null;
-            created_at: string;
-          };
+    eventSource.onmessage = (event) => {
+      const newDonation = JSON.parse(event.data) as {
+        id: string;
+        name: string;
+        amount: number;
+        message: string | null;
+        created_at: string;
+      };
 
-          const formattedDonation: Donation = {
-            id: newDonation.id,
-            name: newDonation.name || 'Ẩn danh',
-            amount: newDonation.amount,
-            message: newDonation.message || '',
-            time: 'Vừa xong',
-          };
+      const formattedDonation: Donation = {
+        id: newDonation.id,
+        name: newDonation.name || 'Ẩn danh',
+        amount: newDonation.amount,
+        message: newDonation.message || '',
+        time: 'Vừa xong',
+      };
 
-          setRecentDonations((prev) => [formattedDonation, ...prev].slice(0, 20));
-          setTotalDonations((prev) => {
-            const newTotal = prev + newDonation.amount;
-            checkMilestone(newTotal);
-            return newTotal;
-          });
-          setDonationCount((prev) => prev + 1);
+      setRecentDonations((prev) => [formattedDonation, ...prev].slice(0, 20));
+      setTotalDonations((prev) => {
+        const newTotal = prev + newDonation.amount;
+        checkMilestone(newTotal);
+        return newTotal;
+      });
+      setDonationCount((prev) => prev + 1);
 
-          toast.success(
-            `${newDonation.name || 'Ẩn danh'} vừa donate ${newDonation.amount.toLocaleString()}đ!`,
-            { description: newDonation.message || 'Cảm ơn bạn!', duration: 5000 },
-          );
-          triggerConfetti();
-        },
-      )
-      .subscribe();
+      toast.success(
+        `${newDonation.name || 'Ẩn danh'} vừa donate ${newDonation.amount.toLocaleString()}đ!`,
+        { description: newDonation.message || 'Cảm ơn bạn!', duration: 5000 },
+      );
+      triggerConfetti();
+    };
+
+    eventSource.onerror = () => {
+      // Browser will auto-reconnect on error; no action needed
+    };
 
     return () => {
-      supabase.removeChannel(channel);
+      eventSource.close();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

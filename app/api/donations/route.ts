@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient, createServiceClient } from '@/lib/supabase/server';
-import { isSupabaseConfigured } from '@/lib/supabase/env';
+import { getDb } from '@/lib/turso/client';
+import { isTursoConfigured } from '@/lib/turso/env';
+import { emitNewDonation } from '@/lib/turso/emitter';
 import { sanitizeInput } from '@/lib/sanitize';
-import type { Donation, DonationInsert } from '@/lib/supabase/types';
+import type { DonationRow } from '@/lib/turso/types';
 
-// Helper function to format time ago
 function formatTimeAgo(createdAt: string): string {
   const now = new Date();
   const created = new Date(createdAt);
@@ -22,7 +22,6 @@ function formatTimeAgo(createdAt: string): string {
   }
 }
 
-// Mock data for when Supabase is not configured
 const mockDonations = [
   { id: '1', name: 'Anh T***', amount: 100000, message: 'Cố lên nhé!', created_at: new Date(Date.now() - 2 * 60 * 1000).toISOString() },
   { id: '2', name: 'Chị H***', amount: 50000, message: 'Ủng hộ minh bạch!', created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString() },
@@ -33,9 +32,7 @@ const mockDonations = [
 
 // GET /api/donations - Get recent donations
 export async function GET() {
-  // Check if Supabase is configured
-  if (!isSupabaseConfigured()) {
-    // Return mock data if Supabase is not configured
+  if (!isTursoConfigured()) {
     const formattedDonations = mockDonations.map((d) => ({
       id: d.id,
       name: d.name,
@@ -52,20 +49,13 @@ export async function GET() {
   }
 
   try {
-    const supabase = createServiceClient();
+    const db = getDb();
+    const result = await db.execute(
+      'SELECT id, name, amount, message, created_at FROM donations ORDER BY created_at DESC LIMIT 20'
+    );
 
-    const { data: donations, error } = await supabase
-      .from('donations')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(20);
-
-    if (error) {
-      console.error('Supabase error:', error);
-      throw error;
-    }
-
-    const formattedDonations = ((donations || []) as Donation[]).map((d) => ({
+    const donations = result.rows as unknown as DonationRow[];
+    const formattedDonations = donations.map((d) => ({
       id: d.id,
       name: d.name,
       amount: d.amount,
@@ -75,11 +65,10 @@ export async function GET() {
 
     return NextResponse.json({
       donations: formattedDonations,
-      total: donations?.length || 0,
+      total: formattedDonations.length,
     });
   } catch (error) {
     console.error('Failed to fetch donations:', error);
-    // Fallback to mock data on error
     const formattedDonations = mockDonations.map((d) => ({
       id: d.id,
       name: d.name,
@@ -102,7 +91,6 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { name, amount, message } = body;
 
-    // Validate
     if (!amount || amount <= 0) {
       return NextResponse.json(
         { error: 'Invalid donation amount' },
@@ -110,9 +98,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if Supabase is configured
-    if (!isSupabaseConfigured()) {
-      // Return mock success if Supabase is not configured
+    if (!isTursoConfigured()) {
       return NextResponse.json({
         success: true,
         donation: {
@@ -127,29 +113,25 @@ export async function POST(request: Request) {
       });
     }
 
-    const supabase = await createClient();
+    const db = getDb();
+    const id = crypto.randomUUID();
+    const sanitizedName = sanitizeInput(name || 'Ẩn danh', 100);
+    const sanitizedMessage = message ? sanitizeInput(message, 500) : null;
 
-    const insertData: DonationInsert = {
-      name: sanitizeInput(name || 'Ẩn danh', 100),
-      amount: Number(amount),
-      message: message ? sanitizeInput(message, 500) : null,
-    };
-
-    const { data: donation, error } = await supabase
-      .from('donations')
-      .insert(insertData as never)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Supabase error:', error);
-      throw error;
-    }
-
-    return NextResponse.json({
-      success: true,
-      donation,
+    await db.execute({
+      sql: 'INSERT INTO donations (id, name, amount, message) VALUES (?, ?, ?, ?)',
+      args: [id, sanitizedName, Number(amount), sanitizedMessage],
     });
+
+    const result = await db.execute({
+      sql: 'SELECT * FROM donations WHERE id = ?',
+      args: [id],
+    });
+
+    const donation = result.rows[0] as unknown as DonationRow;
+    emitNewDonation(donation);
+
+    return NextResponse.json({ success: true, donation });
   } catch (error) {
     console.error('Failed to create donation:', error);
     return NextResponse.json(

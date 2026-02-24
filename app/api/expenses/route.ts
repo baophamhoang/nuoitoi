@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { isSupabaseConfigured } from '@/lib/supabase/env';
-import type { Expense } from '@/lib/supabase/types';
+import { getDb } from '@/lib/turso/client';
+import { isTursoConfigured } from '@/lib/turso/env';
+import type { ExpenseRow } from '@/lib/turso/types';
 
-// Mock expense data for when Supabase is not configured
 const mockExpenses = {
   categories: [
     {
@@ -90,34 +89,25 @@ function formatExpenseResponse(categories: typeof mockExpenses.categories, month
 
 // GET /api/expenses - Get expense breakdown
 export async function GET() {
-  // Check if Supabase is configured
-  if (!isSupabaseConfigured()) {
+  if (!isTursoConfigured()) {
     return NextResponse.json(formatExpenseResponse(mockExpenses.categories, mockExpenses.month, true));
   }
 
   try {
-    const supabase = await createClient();
-
-    // Get current month in format "Tháng M/YYYY"
+    const db = getDb();
     const now = new Date();
     const currentMonth = `Tháng ${now.getMonth() + 1}/${now.getFullYear()}`;
 
-    const { data: expenses, error } = await supabase
-      .from('expenses')
-      .select('*')
-      .eq('month', currentMonth);
+    const result = await db.execute({
+      sql: 'SELECT * FROM expenses WHERE month = ?',
+      args: [currentMonth],
+    });
 
-    if (error) {
-      console.error('Supabase error:', error);
-      throw error;
-    }
-
-    // If no expenses found for current month, return mock data
-    if (!expenses || expenses.length === 0) {
+    if (result.rows.length === 0) {
       return NextResponse.json(formatExpenseResponse(mockExpenses.categories, currentMonth, true));
     }
 
-    const categories = (expenses as Expense[]).map((e) => ({
+    const categories = (result.rows as unknown as ExpenseRow[]).map((e) => ({
       id: e.id,
       percentage: e.percentage,
       label: e.label,

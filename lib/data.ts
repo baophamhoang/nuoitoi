@@ -1,7 +1,6 @@
-import { createServiceClient } from '@/lib/supabase/server';
-import { isSupabaseConfigured } from '@/lib/supabase/env';
-import { getSupabaseServiceRoleKey } from '@/lib/supabase/env';
-import type { Donation as DbDonation, Expense } from '@/lib/supabase/types';
+import { getDb } from '@/lib/turso/client';
+import { isTursoConfigured } from '@/lib/turso/env';
+import type { DonationRow, ExpenseRow } from '@/lib/turso/types';
 import type { Donation, ExpenseCategory, DonationStats } from '@/lib/types';
 
 function formatTimeAgo(createdAt: string): string {
@@ -14,10 +13,6 @@ function formatTimeAgo(createdAt: string): string {
   if (diffMins < 60) return `${diffMins} phút trước`;
   if (diffMins < 1440) return `${Math.floor(diffMins / 60)} giờ trước`;
   return `${Math.floor(diffMins / 1440)} ngày trước`;
-}
-
-function isServiceClientAvailable(): boolean {
-  return isSupabaseConfigured() && !!getSupabaseServiceRoleKey();
 }
 
 const mockDonations = [
@@ -39,19 +34,15 @@ function formatMockDonations(): Donation[] {
 }
 
 export async function fetchDonations(): Promise<Donation[]> {
-  if (!isServiceClientAvailable()) return formatMockDonations();
+  if (!isTursoConfigured()) return formatMockDonations();
 
   try {
-    const supabase = createServiceClient();
-    const { data: donations, error } = await supabase
-      .from('donations')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(20);
+    const db = getDb();
+    const result = await db.execute(
+      'SELECT id, name, amount, message, created_at FROM donations ORDER BY created_at DESC LIMIT 20'
+    );
 
-    if (error) throw error;
-
-    return ((donations || []) as DbDonation[]).map((d) => ({
+    return (result.rows as unknown as DonationRow[]).map((d) => ({
       id: d.id,
       name: d.name,
       amount: d.amount,
@@ -67,22 +58,18 @@ export async function fetchDonations(): Promise<Donation[]> {
 export async function fetchDonationStats(): Promise<DonationStats> {
   const mockStats: DonationStats = { totalAmount: 2450000, donationCount: 47, monthlyGoal: 10000000 };
 
-  if (!isServiceClientAvailable()) return mockStats;
+  if (!isTursoConfigured()) return mockStats;
 
   try {
-    const supabase = createServiceClient();
-    const { data: donations, error } = await supabase
-      .from('donations')
-      .select('amount');
+    const db = getDb();
+    const result = await db.execute('SELECT amount FROM donations');
 
-    if (error) throw error;
-
-    const allDonations = (donations || []) as Pick<DbDonation, 'amount'>[];
-    const totalAmount = allDonations.reduce((sum, d) => sum + d.amount, 0);
+    const rows = result.rows as unknown as Pick<DonationRow, 'amount'>[];
+    const totalAmount = rows.reduce((sum, d) => sum + d.amount, 0);
 
     return {
       totalAmount,
-      donationCount: allDonations.length,
+      donationCount: rows.length,
       monthlyGoal: 10000000,
     };
   } catch (error) {
@@ -101,22 +88,21 @@ const defaultExpenses: ExpenseCategory[] = [
 ];
 
 export async function fetchExpenses(): Promise<ExpenseCategory[]> {
-  if (!isServiceClientAvailable()) return defaultExpenses;
+  if (!isTursoConfigured()) return defaultExpenses;
 
   try {
-    const supabase = createServiceClient();
+    const db = getDb();
     const now = new Date();
     const currentMonth = `Tháng ${now.getMonth() + 1}/${now.getFullYear()}`;
 
-    const { data: expenses, error } = await supabase
-      .from('expenses')
-      .select('*')
-      .eq('month', currentMonth);
+    const result = await db.execute({
+      sql: 'SELECT * FROM expenses WHERE month = ?',
+      args: [currentMonth],
+    });
 
-    if (error) throw error;
-    if (!expenses || expenses.length === 0) return defaultExpenses;
+    if (result.rows.length === 0) return defaultExpenses;
 
-    return (expenses as Expense[]).map((e) => ({
+    return (result.rows as unknown as ExpenseRow[]).map((e) => ({
       id: e.id,
       percentage: e.percentage,
       label: e.label,

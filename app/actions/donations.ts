@@ -1,10 +1,10 @@
 'use server';
 
-import { createServiceClient } from '@/lib/supabase/server';
-import { isSupabaseConfigured } from '@/lib/supabase/env';
-import { getSupabaseServiceRoleKey } from '@/lib/supabase/env';
+import { getDb } from '@/lib/turso/client';
+import { isTursoConfigured } from '@/lib/turso/env';
+import { emitNewDonation } from '@/lib/turso/emitter';
 import { sanitizeInput } from '@/lib/sanitize';
-import type { DonationInsert } from '@/lib/supabase/types';
+import type { DonationRow } from '@/lib/turso/types';
 
 export async function createDonation(data: {
   amount: number;
@@ -20,7 +20,7 @@ export async function createDonation(data: {
   const sanitizedName = name ? sanitizeInput(name, 100) : 'Ẩn danh';
   const sanitizedMessage = message ? sanitizeInput(message, 500) : null;
 
-  if (!isSupabaseConfigured() || !getSupabaseServiceRoleKey()) {
+  if (!isTursoConfigured()) {
     return {
       success: true,
       donation: {
@@ -34,21 +34,21 @@ export async function createDonation(data: {
   }
 
   try {
-    const supabase = createServiceClient();
+    const db = getDb();
+    const id = crypto.randomUUID();
 
-    const insertData: DonationInsert = {
-      name: sanitizedName,
-      amount: Number(amount),
-      message: sanitizedMessage,
-    };
+    await db.execute({
+      sql: 'INSERT INTO donations (id, name, amount, message) VALUES (?, ?, ?, ?)',
+      args: [id, sanitizedName, Number(amount), sanitizedMessage],
+    });
 
-    const { data: donation, error } = await supabase
-      .from('donations')
-      .insert(insertData as never)
-      .select()
-      .single();
+    const result = await db.execute({
+      sql: 'SELECT * FROM donations WHERE id = ?',
+      args: [id],
+    });
 
-    if (error) throw error;
+    const donation = result.rows[0] as unknown as DonationRow;
+    emitNewDonation(donation);
 
     return { success: true, donation };
   } catch (error) {
