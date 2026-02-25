@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getPayOS, isPayOSConfigured } from '@/lib/payos';
-import { createServiceClient } from '@/lib/supabase/server';
+import { getDb } from '@/lib/turso/client';
+import { isTursoConfigured } from '@/lib/turso/env';
+import { emitNewDonation } from '@/lib/turso/emitter';
 import { getPaymentData } from '@/lib/payment-cache';
+import type { DonationRow } from '@/lib/turso/types';
 
 export async function POST(request: Request) {
   try {
@@ -16,19 +19,27 @@ export async function POST(request: Request) {
 
     // code "00" means successful payment
     if (webhookData.code === '00') {
-      // Insert donation into Supabase
-      const supabase = createServiceClient();
-
       const cached = getPaymentData(webhookData.orderCode);
       const name = cached?.name || webhookData.counterAccountName || 'Ẩn danh';
       const message = cached?.message || null;
 
-      await supabase.from('donations').insert({
-        name,
-        amount: webhookData.amount,
-        message,
-        verified: true,
-      } as never);
+      if (isTursoConfigured()) {
+        const db = getDb();
+        const id = crypto.randomUUID();
+
+        await db.execute({
+          sql: 'INSERT INTO donations (id, name, amount, message, verified) VALUES (?, ?, ?, ?, 1)',
+          args: [id, name, webhookData.amount, message],
+        });
+
+        const result = await db.execute({
+          sql: 'SELECT * FROM donations WHERE id = ?',
+          args: [id],
+        });
+
+        const donation = result.rows[0] as unknown as DonationRow;
+        emitNewDonation(donation);
+      }
     }
 
     // PayOS requires 200 OK response

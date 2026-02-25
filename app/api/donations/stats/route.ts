@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { isSupabaseConfigured } from '@/lib/supabase/env';
-import type { Donation } from '@/lib/supabase/types';
+import { getDb } from '@/lib/turso/client';
+import { isTursoConfigured } from '@/lib/turso/env';
+import type { DonationRow } from '@/lib/turso/types';
 
-// Mock stats data for when Supabase is not configured
 const mockStats = {
-  totalAmount: 2450000, // 2.45M VND
+  totalAmount: 2450000,
   donationCount: 47,
-  monthlyGoal: 10000000, // 10M VND
+  monthlyGoal: 10000000,
   weeklyDonors: 12,
   averageDonation: 52128,
   lastUpdated: new Date().toISOString(),
@@ -15,9 +14,7 @@ const mockStats = {
 
 // GET /api/donations/stats - Get donation statistics
 export async function GET() {
-  // Check if Supabase is configured
-  if (!isSupabaseConfigured()) {
-    // Return mock data if Supabase is not configured
+  if (!isTursoConfigured()) {
     const progressPercentage = Math.min(
       (mockStats.totalAmount / mockStats.monthlyGoal) * 100,
       100
@@ -33,33 +30,22 @@ export async function GET() {
   }
 
   try {
-    const supabase = await createClient();
+    const db = getDb();
+    const result = await db.execute('SELECT amount, created_at FROM donations');
 
-    // Get total amount and count
-    const { data: donations, error } = await supabase
-      .from('donations')
-      .select('amount, created_at');
-
-    if (error) {
-      console.error('Supabase error:', error);
-      throw error;
-    }
-
-    const allDonations = (donations || []) as Pick<Donation, 'amount' | 'created_at'>[];
+    const allDonations = result.rows as unknown as Pick<DonationRow, 'amount' | 'created_at'>[];
     const totalAmount = allDonations.reduce((sum, d) => sum + d.amount, 0);
     const donationCount = allDonations.length;
 
-    // Calculate weekly donors (donations in the last 7 days)
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     const weeklyDonors = allDonations.filter(
       (d) => new Date(d.created_at) >= oneWeekAgo
     ).length;
 
-    // Calculate average donation
     const averageDonation = donationCount > 0 ? Math.round(totalAmount / donationCount) : 0;
 
-    const monthlyGoal = 10000000; // 10M VND goal
+    const monthlyGoal = 10000000;
     const progressPercentage = Math.min((totalAmount / monthlyGoal) * 100, 100);
 
     return NextResponse.json({
@@ -75,7 +61,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Failed to fetch donation stats:', error);
-    // Fallback to mock data on error
     const progressPercentage = Math.min(
       (mockStats.totalAmount / mockStats.monthlyGoal) * 100,
       100
